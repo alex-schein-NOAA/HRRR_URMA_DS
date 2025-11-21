@@ -378,3 +378,36 @@ def plot_model_vs_model_RMSE(model_1_attrs,
     plt.show()
 
     return
+
+########################################################
+
+def plot_training_loss(TRAINING_LOG_FILEPATH, title_str="", epoch_offset=0, window_len=10):
+    """
+    Plot epoch loss as a function of epoch number, given a either a full filepath to a training log txt file, or just a training log filename (in which case it will look for the file in C.DIR_UNET_MAIN/Training_logs)
+        !!! LINES MUST BE FORMATTED AS SOMETHING LIKE "End of epoch [number] | Average epoch loss = [float] | [whatever]"
+
+    - title_str should be something like current_model_attrs.savename, or whatever; should be descriptive of the model trained
+    - epoch_offset --> int to offset the x axis; useful if a model was trained from a checkpoint
+    - window_len --> rolling average window length; default = 10 
+    """
+
+    C = CONSTANTS()
+    
+    if "/" not in TRAINING_LOG_FILEPATH: #bad hack but w/e
+        TRAINING_LOG_FILEPATH = f"{C.DIR_UNET_MAIN}/Training_logs/{TRAINING_LOG_FILEPATH}"
+    
+    epoch_number_arr, epoch_loss_arr = read_epoch_num_and_loss(TRAINING_LOG_FILEPATH)
+    
+    x_arr = [n+epoch_offset for n in epoch_number_arr]
+    
+    plt.subplots(1,1, figsize=(12,8))
+    plt.scatter(x_arr, epoch_loss_arr, s=3)
+    plt.plot(x_arr[window_len-1:], rolling_avg(epoch_loss_arr, window_len), color='r')
+    
+    plt.legend(["Loss", f"{window_len}-epoch average"])
+    plt.xlabel("Epoch number")
+    plt.ylabel("Epoch loss")
+    
+    plt.title(f"Training loss, {title_str}")
+
+    return
