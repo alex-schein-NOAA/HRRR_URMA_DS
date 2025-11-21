@@ -116,7 +116,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         - save_fig --> bool for saving; if True, saves to directory this script is called from (currently this function is not intended for formalized plot saving)
         - save_dir --> master save directory
         - fig_savename --> string for file savename, if to_save = True. Should include ".png" at the end
-        - error_units --> string (NOT including parentheses) for variable/error units, e.g. "deg K"
+        - error_units --> string (NOT including parentheses) for variable/error units, e.g. "deg K" (usually is f"{C.varname_units_dict[TARG_VAR]}")
         - avg_denom --> int for how much to scale error plot by. Should be ~10 normally, but for pressurf, should be ~150
     """
     
@@ -255,5 +255,63 @@ def plot_model_vs_model_error(model_1_output,
         title_str = f"Model 1 error minus Model 2 error \n {date_str}"
     
     plt.title(title_str)
+
+    return
+
+########################################################
+
+def plot_model_vs_smartinit_RMSE(model_attrs, 
+                                 statsobj_model, 
+                                 statsobj_smartinit, 
+                                 units_str="UNITS", 
+                                 to_save=False, 
+                                 PLOT_SAVE_DIR=os.getcwd()
+                                ):
+    """
+    Inputs: 
+        - model_attrs --> instance of DefineModelAttributes class for the current model
+        - statsobj_model --> instance of StatObjectConstructor for the current model, with .calc_domain_avg_RMSE_alltimes() already done
+        - statsobj_smartinit --> same but for Smartinit
+        - units_str --> string for the current variable's units (usually is f"{C.varname_units_dict[TARG_VAR]}")
+        - to_save --> bool to save fig or not
+        - PLOT_SAVE_DIR --> full directory path of where to save plots if to_save=True. Default = current working directory
+    """
+    
+    rmse_diff = np.array(statsobj_smartinit.domain_avg_rmse_alltimes_list) - np.array(statsobj_model.domain_avg_rmse_alltimes_list)
+
+    window_len = 24
+
+    fig, axes = plt.subplots(figsize=(14,7))
+    plt.plot(model_attrs.dataset_date_list, rmse_diff, 
+             ".", linestyle='None', markersize=0.5, color='g', alpha=0.5, label="RMSE diff.")
+    
+    plt.plot(model_attrs.dataset_date_list[window_len-1:], rolling_avg(rmse_diff, window_len), 
+             linewidth=1, color="g", label=f"RMSE diff., rolling {window_len}-hr mean")
+    
+    plt.hlines(np.mean(rmse_diff), xmin=model_attrs.dataset_date_list[0], xmax=model_attrs.dataset_date_list[-1], 
+               color="r", linewidth=2, label=f"RMSE diff. 2024 mean ({np.mean(rmse_diff):.3f})")
+    
+    plt.hlines(0, xmin=model_attrs.dataset_date_list[0], xmax=model_attrs.dataset_date_list[-1], linestyle='--', color="k", linewidth=2)
+    
+    plt.xlim([model_attrs.dataset_date_list[0], model_attrs.dataset_date_list[-1]])
+
+    
+    axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
+    for label in axes.get_xticklabels(which='major'):
+        label.set(rotation=30, horizontalalignment='right')
+
+    plt.legend(loc="upper left")
+    
+    plt.ylabel(f"RMSE improvement ({units_str})")
+    plt.xlabel("Date")
+    plt.title(f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n \
+                Model = {model_attrs.savename}", fontsize=9)
+
+    if to_save:
+        fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
+        plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
+        print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
+    else:
+        plt.show()
 
     return
