@@ -264,7 +264,7 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
                                  statsobj_model, 
                                  statsobj_smartinit, 
                                  units_str="UNITS", 
-                                 to_save=False, 
+                                 save_fig=False, 
                                  PLOT_SAVE_DIR=os.getcwd()
                                 ):
     """
@@ -273,8 +273,8 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
         - statsobj_model --> instance of StatObjectConstructor for the current model, with .calc_domain_avg_RMSE_alltimes() already done
         - statsobj_smartinit --> same but for Smartinit
         - units_str --> string for the current variable's units (usually is f"{C.varname_units_dict[TARG_VAR]}")
-        - to_save --> bool to save fig or not
-        - PLOT_SAVE_DIR --> full directory path of where to save plots if to_save=True. Default = current working directory
+        - save_fig --> bool to save fig or not
+        - PLOT_SAVE_DIR --> full directory path of where to save plots if save_fig=True. Default = current working directory
     """
     
     rmse_diff = np.array(statsobj_smartinit.domain_avg_rmse_alltimes_list) - np.array(statsobj_model.domain_avg_rmse_alltimes_list)
@@ -307,11 +307,74 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
     plt.title(f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n \
                 Model = {model_attrs.savename}", fontsize=9)
 
-    if to_save:
+    if save_fig:
         fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
         plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
         print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
-    else:
-        plt.show()
+        
+    plt.show()
+
+    return
+
+########################################################
+
+def plot_model_vs_model_RMSE(model_1_attrs, 
+                             model_2_attrs, 
+                             statsobj_model_1, 
+                             statsobj_model_2, 
+                             TARG_VAR, 
+                             units_str="UNITS", 
+                             save_fig=False, 
+                             PLOT_SAVE_DIR=os.getcwd()
+                            ):
+    """
+    Inputs: 
+        - model_1_attrs --> instance of DefineModelAttributes class for the first (baseline) model
+        - model_2_attrs --> instance of DefineModelAttributes class for the second (comparison) model
+        - statsobj_model_1 --> instance of StatObjectConstructor for the first model, with .calc_domain_avg_RMSE_alltimes() already done
+        - statsobj_model_2 --> same but for second model
+        - TARG_VAR --> string of the desired target variable, e.g. 't2m'
+        - units_str --> string for the current variable's units (usually is f"{C.varname_units_dict[TARG_VAR]}")
+        - save_fig --> bool to save fig or not
+        - PLOT_SAVE_DIR --> full directory path of where to save plots if save_fig=True. SHOULD BE CHANGED FROM DEFAULT BY CALLING FUNCTION!
+    """
+
+    rmse_diff = np.array(statsobj_model_1.domain_avg_rmse_alltimes_list) - np.array(statsobj_model_2.domain_avg_rmse_alltimes_list)
+
+    window_len = 24
+
+    fig, axes = plt.subplots(figsize=(14,7))
+    plt.plot(model_1_attrs.dataset_date_list, rmse_diff, 
+             ".", linestyle='None', markersize=0.5, color='b', alpha=0.5, label="RMSE diff.") 
+    
+    plt.plot(model_1_attrs.dataset_date_list[window_len-1:], rolling_avg(rmse_diff, window_len), 
+             linewidth=1, color="b", label=f"RMSE diff., rolling {window_len}-hr mean")
+    
+    plt.hlines(np.mean(rmse_diff), xmin=model_1_attrs.dataset_date_list[0], xmax=model_1_attrs.dataset_date_list[-1], 
+               color="r", linewidth=2, label=f"RMSE diff. 2024 mean ({np.mean(rmse_diff):.3f})")
+    
+    plt.hlines(0, xmin=model_1_attrs.dataset_date_list[0], xmax=model_1_attrs.dataset_date_list[-1], linestyle='--', color="k", linewidth=2)
+    
+    plt.xlim([model_1_attrs.dataset_date_list[0], model_1_attrs.dataset_date_list[-1]])
+
+    
+    axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
+    for label in axes.get_xticklabels(which='major'):
+        label.set(rotation=30, horizontalalignment='right')
+
+    plt.legend(loc="upper left")
+    
+    plt.ylabel(f"RMSE improvement ({units_str})")
+    plt.xlabel("Date")
+    plt.title(f"{TARG_VAR} domain-average RMSE difference, Model 1 minus Model 2, 2024 \n \
+                Model 1 = {model_1_attrs.savename} \n \
+                Model 2 = {model_2_attrs.savename}", fontsize=9)
+
+    if save_fig:
+        fig_savename = f"RMSE_{TARG_VAR}_model1({model_1_attrs.savename})_model2({model_2_attrs.savename})"
+        plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
+        print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
+        
+    plt.show()
 
     return
