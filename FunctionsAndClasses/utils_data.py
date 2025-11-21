@@ -180,3 +180,119 @@ def get_valid_region_mask(VALID_REGION_FILEPATH=None,
         print(f"Valid region computed, time taken = {time.time() - start:.1f} seconds. New file located at {VALID_REGION_FILEPATH} for future use")
 
     return valid_region_for_patch_sw_corner
+
+######################################################################################################################################################
+
+########################################################
+### DATA CROPPING/MANIPULATION FUNCTIONS
+# Any functions that manipulate or crop data 
+########################################################
+
+def crop_input(data_to_crop, data_for_mask, return_xr=False):
+    """
+    Crops out areas of only NaNs. Note this takes 2 input arguments, which can be the same but usually aren't for cropping over CONUS...
+    Inputs:
+    - data_to_crop --> input 2D numpy array that we want cropped. Does NOT need to have regions of NaNs! Can also be an xarray object (usually if return_xr=True)
+    - data_for_mask --> input 2D numpy array that DOES have regions of NaNs, whose mask is to be used to crop data_to_crop. Can also be an xarray object (usually if return_xr=True)
+    - return_xr --> bool to determine if the resulting xarray objects are returned or not. Default = False, but can be set to True if feeding in xarray objects whose properties should be preserved
+
+    Output:
+        - Cropped version of data_to_crop; raw array if return_xr=False, or xarray object if True
+    
+    Usual use case: data_for_mask = predictor data for HRRR, data_to_crop = whatever other data (could also be predictor data, or model output, or target data)
+    
+    """
+    data_to_crop_xr = xr.DataArray(data_to_crop, dims=('y','x')) #Easiest to cast in xarray. (y,x) should be the ordering of the dims for such data
+    data_for_mask_xr = xr.DataArray(data_for_mask, dims=('y','x')) #Also needs to be a DataArray for .where to work
+    data_to_crop_xr_cropped = data_to_crop_xr.where(~np.isnan(data_for_mask_xr), drop=True)
+
+    if return_xr:
+        return data_to_crop_xr_cropped
+    else:
+        return data_to_crop_xr_cropped.data #return raw array, not xarray object
+
+########################################################
+
+def crop_to_intersection_of_inputs(predictor,
+                                    model_1_output,
+                                    model_2_output,
+                                    target=None,
+                                    return_xr=False
+                                   ):
+    """ 
+    Function to do restriction of data to a shared domain between model_1_output (assumed to have the same region as predictor) and model_2_output.
+    Intended use: model_1_output = ML model output (on the HRRR region), model_2_output = Smartinit
+
+    !! Should be used INSTEAD OF crop_input - i.e. on arrays that have NOT yet been spatially restricted !!
+
+    Inputs: all of the following should be arrays, but could be xr objects (uncommon)
+        - predictor --> array of predictor (i.e. HRRR) data, with surrounding region of NaNs. MUST BE INCLUDED
+        - model_1_output --> array of model output (should be ML model, not Smartinit). Does not need to have surrounding NaNs. MUST BE INCLUDED
+        - model_2_output --> array of model output; intended to be Smartinit, but could be a second ML model's output, in which case this function will just return the same thing as crop_input, but for all arrays involved. MUST BE INCLUDED
+        - target --> array of target (i.e. URMA). OPTIONAL - though should usually be included
+        - return_xr --> bool to control if raw arrays are returned (if False, which is default) or xarray objects (if True). In the latter case, all the inputs must also be xarray objects!
+        
+    Outputs: 
+        - Restricted to their common intersection, in order: 
+            predictor, model_1_output, model_2_output [, target if not None]
+    """
+
+    # First restrict to the HRRR domain
+    if target is not None:
+        target = crop_input(target, predictor, return_xr=return_xr)
+    model_1_output = crop_input(model_1_output, predictor, return_xr=return_xr)
+    model_2_output = crop_input(model_2_output, predictor, return_xr=return_xr)
+    predictor = crop_input(predictor, predictor, return_xr=return_xr)
+
+    # Then restrict to model_2_output's domain - will restrict futher if this is Smartinit, but will not do anything if model_2_output is also on the HRRR domain
+    if target is not None:
+        target = crop_input(target, model_2_output, return_xr=return_xr)
+    predictor = crop_input(predictor, model_2_output, return_xr=return_xr)
+    model_1_output = crop_input(model_1_output, model_2_output, return_xr=return_xr)
+    model_2_output = crop_input(model_2_output, model_2_output, return_xr=return_xr)
+
+    if target is not None:
+        return predictor, model_1_output, model_2_output, target
+    else:
+        return predictor, model_1_output, model_2_output
+
+########################################################
+
+def restrict_to_region(data, 
+                       RESTR_ORIGIN_LAT_IDX=None,
+                       RESTR_ORIGIN_LON_IDX=None,
+                       RESTR_PATCH_SIZE_LAT=None,
+                       RESTR_PATCH_SIZE_LON=None,
+                       region_keyword=None
+                      ):
+    """ 
+    Restricts input data (i.e. an array or xr object) to the defined region. Data must be HRRR/URMA/model output/Smartinit formatted, i.e. origin @ SW corner of the domain.
+    Stores some commonly used domains for data that has already been restricted to the intersection of the HRRR and Smartinit regions, i.e. data that is 1358 x 2145. 
+    !! Calling function must do this restriction beforehand !!! Use crop_to_intersection_of_inputs
+
+    Inputs:
+        - data --> input data to be restricted. Must be formatted as above
+        - RESTR_ORIGIN_[LAT/LON]_IDX --> int to define the SW corner lat/lon 
+        - RESTR_PATCH_SIZE_[LAT/LON] --> int to define the north/east extent of the selection, respectively
+        - region_keyword --> string (case-sensitive) of the region to select, if any. Valid options as follows:
+            > "Colorado" --> 200x200 patch over the Colorado Rockies
+            > "California" --> 350x200 lat/lon patch over California (and a bit of the surrounding area)
+
+    Output:
+        - data, restricted to whatever region is defined
+    """
+
+    if region_keyword=="Colorado":
+        RESTR_ORIGIN_LAT_IDX=630
+        RESTR_ORIGIN_LON_IDX=600
+        RESTR_PATCH_SIZE_LAT=200
+        RESTR_PATCH_SIZE_LON=200
+    elif region_keyword=="California":
+        RESTR_ORIGIN_LAT_IDX=570
+        RESTR_ORIGIN_LON_IDX=80
+        RESTR_PATCH_SIZE_LAT=350
+        RESTR_PATCH_SIZE_LON=200
+
+    #Should add more regions here, namely east/west CONUS, great lakes, Appalachians 
+    
+    return data[RESTR_ORIGIN_LAT_IDX:RESTR_ORIGIN_LAT_IDX+RESTR_PATCH_SIZE_LAT, RESTR_ORIGIN_LON_IDX:RESTR_ORIGIN_LON_IDX+RESTR_PATCH_SIZE_LON]
