@@ -211,3 +211,49 @@ def plot_predictor_output_truth_error_CONUS(predictor,
     plt.show()
     
     return
+
+########################################################
+
+def plot_model_vs_model_error(model_1_output, 
+                              model_2_output, 
+                              pred, 
+                              targ, 
+                              date_str, 
+                              error_units, 
+                              title_str=None, 
+                              avg_denom=10
+                             ):
+    
+    """
+    Plots the difference in absolute errors between 2 models, or a model and Smartinit
+
+    Inputs:
+        - model_1_output --> array of model 1's output for whatever variable 
+        - model_2_output --> same but for model 2. Can also be Smartinit data
+        - pred, targ --> predictor and target data (HRRR and URMA respectively) 
+        - date_str --> should be dt_current from get_model_output_at_idx
+        - error_units --> string of the format f"{C.varname_units_dict[TARG_VAR]} (+ = [model 2]/[Smartinit] is better)"
+        - title_str --> string describing the models, or model + smartinit. Should include a line break (\n) with {dt_current} in it
+        - avg_denom --> int, same usage as other plotting functions, to control the scale of the colorbar
+    """
+
+    pred, model_1_output, model_2_output, targ = crop_to_intersection_of_regions(pred, model_1_output, model_2_output, targ)
+
+    maxtemp = np.max([np.nanmax(model_1_output.squeeze()), np.nanmax(model_2_output.squeeze()), np.nanmax(targ.squeeze()), np.nanmax(pred.squeeze())])
+    mintemp = np.min([np.nanmin(model_1_output.squeeze()), np.nanmin(model_2_output.squeeze()), np.nanmin(targ.squeeze()), np.nanmin(pred.squeeze())])
+    avg = (maxtemp-mintemp)/avg_denom
+    
+    fig, axs = plt.subplots(1,1, figsize=(12,16))
+
+    # Need to plot difference in ABSOLUTE errors, otherwise there's issues with negative regions
+    pos = axs.imshow((np.abs(model_1_output.squeeze()-targ.squeeze()) - (np.abs(model_2_output.squeeze()-targ.squeeze()))), cmap="coolwarm", origin='lower', vmin = -1*avg, vmax = avg)
+    axs.axis("off")
+    cbar = fig.colorbar(pos, fraction=0.022, pad=0.01)
+    cbar.set_label(f"Difference in {error_units}")
+    
+    if title_str is None:
+        title_str = f"Model 1 error minus Model 2 error \n {date_str}"
+    
+    plt.title(title_str)
+
+    return
