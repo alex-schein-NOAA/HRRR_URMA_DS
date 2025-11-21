@@ -1,7 +1,7 @@
 from HEADER_torch import *
+from HEADER_utilities import *
 
-
-
+from CONSTANTS import *
 
 ########################################################
 ### DATA FETCHING FUNCTIONS
@@ -10,71 +10,173 @@ from HEADER_torch import *
 
 def get_model_output_at_idx(model_attrs, 
                             model, 
-                            pred_var="t2m", 
-                            targ_var="t2m", 
+                            predictor_var="t2m", 
+                            target_var="t2m", 
                             idx=0, 
                             is_nan=True,
                             nan_fill_value=0,
                             is_unnormed=True,
-                            crop_pred=False,
-                            crop_model_output=False,
-                            crop_targ=False,
                             device="cuda"
                            ):
     """
     Inputs:
         - model_attrs --> DefineModelAttributes object. MUST HAVE .create_dataset() ALREADY CALLED! 
         - model --> Pytorch model to use, with weights loaded and device initialized
-        - pred_var --> string of the predictor variable to get the output of. See the dataset class for valid options
-        - targ_var --> string of the target variable to get the output of
+        - predictor_var --> string of the predictor variable to get the output of. See the dataset class for valid options
+        - target_var --> string of the target variable to get the output of
         - idx --> int, index to get the output of (time index)
         - is_nan --> bool to control if the model should be applied to NaN data (if False) or if the NaN data should be replaced (if True [default]). 
             > Should generally be set to True if predictor data has NaNs (e.g. CONUS HRRR data) because the models don't apply to NaNs and thus the output is severely truncated from what it should be. 
-            
-        - nan_fill_value: int or float, used to fill in all NaN values in the predictor data, if is_nan=True
-        - is_unnormed: bool; if True (default), returns unnormed data. Predictor and target data is read directly from their raw xarray files, whilst model_output is unnormalized by the corresponding variable's stored (pseudo-) mean and stddev
-        - crop_pred: bool, default value = False; if True, crops the predictor data to cut out regions of NaNs for better plotting. This also serves as the mask for crop_model_output and crop_targ
-        - crop_model_output: bool, default value = False; if True (default), crops the model output data according to the predictor var's mask
-        - crop_targ: bool, default value = False; if True (default), crops the target data " "
-        - device: cuda device, default to just "cuda". Might need to change this in calling function, be careful
+        - nan_fill_value --> int or float, used to fill in all NaN values in the predictor data, if is_nan=True. Default = 0 (best value, experimentally determined)
+        - is_unnormed --> bool; if True (default), returns unnormed data. Predictor and target data is read directly from their raw xarray files, whilst model_output is unnormalized by the corresponding variable's stored (pseudo-) mean and stddev
+        - device --> cuda device, default to just "cuda". Might need to change this in calling function if one GPU is overloaded
 
     Outputs:
-        - predictor @ index, UNNORMED if is_unnormed, CROPPED if crop_pred
+        - predictor @ index, UNNORMED if is_unnormed, CROPPED if crop_predictor
+        - model output @ index, UNNORMED if is_unnormed, CROPPED if crop_target
         - target @ index, UNNORMED if is_unnormed, CROPPED if crop_model_output
-        - model output @ index, UNNORMED if is_unnormed, CROPPED if crop_targ
         - dt_current as dt.datetime object, for plot title purposes
     """
     
-    pred,targ = model_attrs.dataset[idx]
-    if is_nan: #Added 2025-10-15
-        np.nan_to_num(pred, copy=False, nan=nan_fill_value) 
-    pred = pred[np.newaxis,:] 
-    pred_gpu = torch.from_numpy(pred).cuda(device)
+    predictor, target = model_attrs.dataset[idx]
+    if is_nan: 
+        np.nan_to_num(predictor, copy=False, nan=nan_fill_value) 
+    predictor = predictor[np.newaxis,:] 
+    predctor_gpu = torch.from_numpy(predictor).cuda(device)
     
     with torch.no_grad():
-        model_output = model(pred_gpu.float())
+        model_output = model(predctor_gpu.float())
         model_output = model_output.cpu().numpy()
     
-    date = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(pred_var)][idx].valid_time.data
+    date = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(predictor_var)][idx].valid_time.data
     dt_current = dt.datetime.strptime(str(np.datetime_as_string(date, unit='m')), "%Y-%m-%dT%H:%M")
     
     if is_unnormed:
-        pred = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(pred_var)][idx].data
-        targ = model_attrs.dataset.xr_datasets_targ[model_attrs.target_vars.index(targ_var)][idx].data
+        predictor = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(predictor_var)][idx].data
+        target = model_attrs.dataset.xr_datasets_target[model_attrs.target_vars.index(target_var)][idx].data
 
-        model_output = ( model_attrs.dataset.datasets_targ_normed_stddevs[model_attrs.target_vars.index(targ_var)]
-                         *model_output[0,model_attrs.target_vars.index(targ_var),:] 
-                         + model_attrs.dataset.datasets_targ_normed_means[model_attrs.target_vars.index(targ_var)] )
+        model_output = ( model_attrs.dataset.datasets_targ_normed_stddevs[model_attrs.target_vars.index(target_var)]
+                         *model_output[0,model_attrs.target_vars.index(target_var),:] 
+                         + model_attrs.dataset.datasets_targ_normed_means[model_attrs.target_vars.index(target_var)] )
     
     else: #model output is already normed
-        pred = pred[0,model_attrs.predictor_vars.index(pred_var),:]
-        targ = targ[model_attrs.target_vars.index(targ_var),:]
-
-    if crop_model_output:
-        model_output = crop_input(model_output, pred)
-    if crop_targ:
-        targ = crop_input(targ, pred)
-    if crop_pred: #pred done last because it first has to serve as the mask for the previous data
-        pred = crop_input(pred, pred)
+        predictor = predictor[0,model_attrs.predictor_vars.index(predictor_var),:]
+        target = target[model_attrs.target_vars.index(target_var),:]
     
-    return pred, targ, model_output, dt_current
+    return predictor, model_output, target, dt_current
+
+########################################################
+
+def get_smartinit_output_at_idx(idx, 
+                                target_var,
+                                FORECAST_LEAD_HOURS=1, 
+                                smartinit_directory=None,
+                                smartinit_var_select_dict=None, 
+                                varname_translation_dict=None, 
+                                START_DATE=None
+                               ):
+    """
+    Method to open one Smartinit file and return its output for one variable, restricted to whatever spatial domain we define.
+    Designed for StatObjectConstructor but can be called from anywhere else that Smartinit output is needed.
+
+    Inputs:
+        - idx --> int of index to select. Should line up with sample_idx indexing from HRRR
+        - target_var --> string of a valid target variable, e.g. "t2m"
+        - FORECAST_LEAD_HOURS --> int of forecast lead time. Default = 1. 
+            > !!! Should already have offset START_DATE if START_DATE is not None !!!
+            > Should never be changed from default - only included to extend functionality if needed
+        - smartinit_directory --> string of directory of smartinit data which is NOT subset in any way but is named according to the convention in the code below. 
+            > If None (default), autodirects to the smartinit directory in the CONSTANTS class.
+        - smartinit_var_select_dict --> as in CONSTANTS. 
+            > If None (default), autodirects to the appropriate dict in the CONSTANTS class.
+        - varname_translation_dict --> as in CONSTANTS. 
+            > If None (default), autodirects to the appropriate dict in the CONSTANTS class.
+        - START_DATE --> dt.datetime object. Currently we only have Smartinit data for 2024, so this should be 2023/12/31 23z or later. 
+            > Should pretty much never be changed from the default value
+            > !!! VERY IMPORTANT: if not None, then the calling function should have START_DATE = dt.datetime([20240101_00z or greater])-dt.timedelta(hours=FORECAST_LEAD_HOURS) !!!
+
+    Outputs:
+        - xr_smartinit --> xarray object of the smartinit data @ i + target_var
+            - Returns xarray object, not just data, so calling function should invoke .data if that's what's desired
+    """
+
+    C = CONSTANTS()
+
+    #These should generally NOT be changed in the function call
+    if smartinit_directory is None:
+        smartinit_directory = C.DIR_SMARTINIT_DATA
+    if smartinit_var_select_dict is None:
+        smartinit_var_select_dict = C.urma_var_select_dict #they share the same keys
+    if varname_translation_dict is None:
+        varname_translation_dict = C.varname_translation_dict
+    
+    if START_DATE is None: #This should be the default, as this method is written to count hours from the first available Smartinit date, which is 2024-01-01 00z
+        START_DATE = dt.datetime(2024,1,1,0)-dt.timedelta(hours=FORECAST_LEAD_HOURS)
+    
+    DATE_STR = dt.date.strftime(START_DATE + dt.timedelta(hours=idx), "%Y%m%d")
+    file_to_open = f"{smartinit_directory}/hrrr_smartinit_{DATE_STR}_t{str((START_DATE.hour+idx)%24).zfill(2)}z_f{str(FORECAST_LEAD_HOURS).zfill(2)}_regridded.grib2" #changed 2025-10-22 to read the regridded CONUS smartinit
+    xr_smartinit = xr.open_dataset(file_to_open,
+                                   engine="cfgrib", 
+                                   backend_kwargs=smartinit_var_select_dict[varname_translation_dict[target_var]],
+                                   decode_timedelta=True)
+    xr_smartinit = xr_smartinit[varname_translation_dict[target_var]]
+    
+    return xr_smartinit
+
+########################################################
+
+def get_valid_region_mask(VALID_REGION_FILEPATH=None, 
+                          PATCH_SIZE=None, 
+                          file_save_dir=None, 
+                          file_save_name=None):
+    """
+    Function to either fetch a precalculated mask of valid locations for patch's SW corner selection for use in the CONUS Dataset class, or calculate and return+save that data if it doesn't exist in file_save_dir.
+    SAVED FILES SHOULD/WILL BE OF DIMENSION 1597x2345, i.e. the entire extended HRRR/URMA domain, because this is what the Dataset class(es) use and what __getitem__ will expect!
+
+    Inputs:
+        - VALID_REGION_FILEPATH = full filepath (including extension - should be csv) to the file containing the binary valid/invalid location data, which should be formatted according to this function's writing functionality. If it exists, it's read in and returned, otherwise it's calculated then returned + saved to disk
+            > If None, defaults to {file_save_dir}/{file_save_name}
+        - PATCH_SIZE - int for square patch size. If None (default), then the PATCH_SIZE in the CONSTANTS class is used. Should usually be included in the calling function's use, just in case
+        - file_save_dir = full filepath to the save directory, if not using the default location
+            > Default location = /scratch3/BMC/wrfruc/aschein/Train_Test_Files/
+        - file_save_name = savename (including .csv extension) of the file, if not using the default construction
+            > Default savename = "valid_region_for_patch_sw_corner_PATCHSIZE{PATCH_SIZE}.csv" - this only works for square patches, so revisit this convention if nonsquare patches are used!
+    """
+
+    C = CONSTANTS()
+    
+    if PATCH_SIZE is None:
+        PATCH_SIZE = C.PATCH_SIZE 
+
+    if file_save_name is None:
+        file_save_name = f"valid_region_for_patch_sw_corner_PATCHSIZE{PATCH_SIZE}.csv"
+
+    if file_save_dir is None:
+        file_save_dir = C.DIR_TRAIN_TEST
+
+    if VALID_REGION_FILEPATH is None:
+        VALID_REGION_FILEPATH = f"{file_save_dir}/{file_save_name}"
+    
+    if os.path.exists(VALID_REGION_FILEPATH): #read in the data 
+        valid_region_for_patch_sw_corner = np.genfromtxt(VALID_REGION_FILEPATH, delimiter=',')
+    else: #need to calculate the region, and save to disk then return
+        print(f"Valid patch selection region for PATCH_SIZE = {PATCH_SIZE} doesn't exist on disk (should be at {VALID_REGION_FILEPATH}). Computing this region now")
+        xr_hrrr_conus = xr.open_dataarray(f"{C.DIR_TRAIN_TEST}/test_hrrr_alltimes_CONUS_t2m_f01.grib2", decode_timedelta=True, engine='cfgrib') #using t2m as the default - doesn't matter
+        data_mask = xr_hrrr_conus[0].notnull() #Somewhat bugged if calling this in the below selection, so it needs to be separate
+        xr_hrrr_conus_masked = xr_hrrr_conus[0].where(data_mask, drop=False) #don't drop! Need to keep the dimension
+        valid_region_for_patch_sw_corner =  np.zeros((np.shape(xr_hrrr_conus_masked.data)))
+        
+        start = time.time()
+        for lat_idx in xr_hrrr_conus_masked.y.data[:-PATCH_SIZE]: #Can't extend a patch beyond the domain!
+            for lon_idx in xr_hrrr_conus_masked.x.data[:-PATCH_SIZE]: #Can't extend a patch beyond the domain!
+                patch = xr_hrrr_conus_masked[lat_idx:lat_idx+PATCH_SIZE, lon_idx:lon_idx+PATCH_SIZE]
+                if ~np.any(patch.isnull()): #if the patch is ok, flip the corresponding index in valid_region_for_patch_sw_corner
+                    valid_region_for_patch_sw_corner[lat_idx, lon_idx]=1
+
+        with open(VALID_REGION_FILEPATH, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerows(valid_region_for_patch_sw_corner) 
+        
+        print(f"Valid region computed, time taken = {time.time() - start:.1f} seconds. New file located at {VALID_REGION_FILEPATH} for future use")
+
+    return valid_region_for_patch_sw_corner
