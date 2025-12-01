@@ -1,6 +1,6 @@
 
-from FunctionsAndClasses.HEADER_torch import *
-from FunctionsAndClasses.HEADER_utilities import *
+from HEADER_torch import *
+from HEADER_utilities import *
 import torch.nn.functional as F
 
 #######################################################################################################################
