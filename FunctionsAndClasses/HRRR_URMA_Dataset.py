@@ -205,48 +205,6 @@ class HRRR_URMA_Dataset(Dataset):
             return data_save_path
 
     #########################################
-
-    # def get_normed_data_at_idx(self, i, idx, is_pred=True):
-    #     """
-    #     Helper function to be used in __getitem__. 
-    #     Note: relies on datasets/means/stddevs in list to be ordered the same as the order in predictor_vars or target_vars, but the lists are constructed this way in the main function, so not that big of a deal for use in __getitem__. Be careful if calling this in an outside script, though!
-    #     Inputs:
-    #         - i = index of current variable in relation to predictor_vars or target_vars
-    #         - idx = actual index to select
-    #         - is_pred = bool to select from the correct list
-
-    #     Outputs:
-    #         - output of variable @ i, index=idx, normed appropriately, and appended with newaxis for concat purposes
-    #     """
-    #     if is_pred: #select from pred data
-    #         return ((self.xr_datasets_pred[i][idx].data - self.datasets_pred_normed_means[i])/self.datasets_pred_normed_stddevs[i])[np.newaxis,:,:]
-    #     else: #select from targ data
-    #         return ((self.xr_datasets_targ[i][idx].data - self.datasets_targ_normed_means[i])/self.datasets_targ_normed_stddevs[i])[np.newaxis,:,:]
-
-    # #########################################
-
-    # def get_normed_data_at_idx_and_patch(self, i, idx, coords, is_pred=True):
-    #     """
-    #     Helper function to be used in __getitem__. 
-    #     Note: relies on datasets/means/stddevs in list to be ordered the same as the order in predictor_vars or target_vars, but the lists are constructed this way in the main function, so not that big of a deal for use in __getitem__. Be careful if calling this in an outside script, though!
-    #     Inputs:
-    #         - i = index of current variable in relation to predictor_vars or target_vars
-    #         - idx = actual time index to select
-    #         - coords = 4-tuple array containing the indices of the domain to be selected, already calculated in the calling function.
-    #             - ORDERING: ['south_lat_idx', 'north_lat_idx', 'west_lon_idx', 'east_lon_idx']
-    #             - Should be the case that north_lat_idx = south_lat_idx+C.PATCH_SIZE, and likewise east_lon_idx = west_lon_idx+C.PATCH_SIZE, but this is left flexible, just in case
-    #         - is_pred = bool to select HRRR or URMA (True/False respectively)
-
-    #     Outputs:
-    #         - output of variable @ i, patch=patch_idx, index=idx, normed appropriately, and appended with newaxis for concat purposes
-    #     """
-        
-    #     if is_pred: #select from pred data
-    #         return ((self.xr_datasets_pred[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_pred_normed_means[i])/self.datasets_pred_normed_stddevs[i])[np.newaxis,:,:]
-    #     else: #select from targ data
-    #         return ((self.xr_datasets_targ[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_targ_normed_means[i])/self.datasets_targ_normed_stddevs[i])[np.newaxis,:,:]
-
-    #########################################
     
     def get_normed_data_at_idx(self, i, idx, is_predictor=True, is_patches=False, coords=None):
         """
@@ -275,6 +233,7 @@ class HRRR_URMA_Dataset(Dataset):
             else: #select from target data
                 return ((self.xr_datasets_target[i][idx].data - self.datasets_target_normed_means[i])/self.datasets_target_normed_stddevs[i])[np.newaxis,:,:]
 
+    
     #########################################
     
 
@@ -282,7 +241,7 @@ class HRRR_URMA_Dataset(Dataset):
         
         if self.is_patches:
             # This block is much more verbose than it needs to be, but it helps for debugging
-            list_of_valid_indices = np.argwhere(self.valid_region_for_patch_sw_corner==True) #convenient to select the SW corner from
+            list_of_valid_indices = np.argwhere(self.valid_region_for_patch_sw_corner==True) #convenient to select the SW corner from a list. Uniform selection distribution over list of unraveled index 2-tuples --> should be close enough to bivariate uniform, so coverage over CONUS is sufficient. Works well in practice
             int_rand = np.random.randint(0, len(list_of_valid_indices))
             sw_corner_idxs = list_of_valid_indices[int_rand] #returns 2-tuple of SW corner [lat_idx, lon_idx]
     
@@ -290,22 +249,26 @@ class HRRR_URMA_Dataset(Dataset):
             # Useful to have this as an object variable rather than local, for plotting purposes in outside functions
             self.coords = [sw_corner_idxs[0], sw_corner_idxs[0]+C.PATCH_SIZE,
                            sw_corner_idxs[1], sw_corner_idxs[1]+C.PATCH_SIZE]
-    
-            ## Start with the first variable for each of predictor and target
-            predictor = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=True)
-            target = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=False)
-    
-            ## Add new channels for as many variables as we have
-            if len(self.predictor_vars) > 1:
-                for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=True)
-                    predictor = np.concatenate((predictor, ds), axis=0)
-            if len(self.target_vars) > 1:
-                for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=False)
-                    target = np.concatenate((target, ds), axis=0)
-    
-            ## Add terrain layers as last channels
+        else:
+            self.coords = None
+
+        ### Common between both cases for is_patches
+        ## Start with the first variable for each of predictor and target
+        predictor = self.get_normed_data_at_idx(0, idx, is_predictor=True, is_patches=self.is_patches, coords=self.coords)
+        target = self.get_normed_data_at_idx(0, idx, is_predictor=False, is_patches=self.is_patches, coords=self.coords)
+        
+        if len(self.predictor_vars) > 1:
+            for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
+                ds = self.get_normed_data_at_idx(i, idx, is_predictor=True, is_patches=self.is_patches, coords=self.coords)
+                predictor = np.concatenate((predictor, ds), axis=0)
+        if len(self.target_vars) > 1:
+            for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
+                ds = self.get_normed_data_at_idx(i, idx, is_predictor=False, is_patches=self.is_patches, coords=self.coords)
+                target = np.concatenate((target, ds), axis=0)
+
+        ### Add terrain layers as last channels
+        ## This is case-dependent; I don't want to bother rewriting the selection routine for terrain so this will have to do at least for now
+        if self.is_patches:
             if self.with_hrrr_terrain:
                 terr = (self.terrain_hrrr_normed[self.coords[0]:self.coords[1], self.coords[2]:self.coords[3]])[np.newaxis,:,:]
                 predictor = np.concatenate((predictor, terr), axis=0)
@@ -315,23 +278,7 @@ class HRRR_URMA_Dataset(Dataset):
             if self.with_diff_terrain:
                 terr = (self.terrain_diff_normed[self.coords[0]:self.coords[1], self.coords[2]:self.coords[3]])[np.newaxis,:,:]
                 predictor = np.concatenate((predictor, terr), axis=0)
-
-        else: #load all of CONUS
-            ## Start with the first variable for each of predictor and target
-            predictor = self.get_normed_data_at_idx(0, idx, is_predictor=True)
-            target = self.get_normed_data_at_idx(0, idx, is_predictor=False)
-    
-            ## Add new channels for as many variables as we have
-            if len(self.predictor_vars) > 1:
-                for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx(i, idx, is_predictor=True)
-                    predictor = np.concatenate((predictor, ds), axis=0)
-            if len(self.target_vars) > 1:
-                for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx(i, idx, is_predictor=False)
-                    target = np.concatenate((target, ds), axis=0)
-
-            ## Add terrain layers as last channels
+        else:
             if self.with_hrrr_terrain:
                 terr = (self.terrain_hrrr_normed)[np.newaxis,:,:]
                 predictor = np.concatenate((predictor, terr), axis=0)
@@ -342,7 +289,74 @@ class HRRR_URMA_Dataset(Dataset):
                 terr = (self.terrain_diff_normed)[np.newaxis,:,:]
                 predictor = np.concatenate((predictor, terr), axis=0)
 
-        
         return (predictor), (target)
+
+        
+        # if self.is_patches:
+        #     # This block is much more verbose than it needs to be, but it helps for debugging
+        #     list_of_valid_indices = np.argwhere(self.valid_region_for_patch_sw_corner==True) #convenient to select the SW corner from
+        #     int_rand = np.random.randint(0, len(list_of_valid_indices))
+        #     sw_corner_idxs = list_of_valid_indices[int_rand] #returns 2-tuple of SW corner [lat_idx, lon_idx]
+    
+        #     # ORDERING: ['south_lat_idx', 'north_lat_idx', 'west_lon_idx', 'east_lon_idx']
+        #     # Useful to have this as an object variable rather than local, for plotting purposes in outside functions
+        #     self.coords = [sw_corner_idxs[0], sw_corner_idxs[0]+C.PATCH_SIZE,
+        #                    sw_corner_idxs[1], sw_corner_idxs[1]+C.PATCH_SIZE]
+    
+        #     ## Start with the first variable for each of predictor and target
+        #     # predictor = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=True)
+        #     # target = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=False)
+        #     predictor = self.get_normed_data_at_idx(0, idx, is_predictor=True, is_patches=self.is_patches, coords=self.coords)
+        #     target = self.get_normed_data_at_idx(0, idx, is_predictor=False, is_patches=self.is_patches, coords=self.coords)
+    
+        #     ## Add new channels for as many variables as we have
+        #     if len(self.predictor_vars) > 1:
+        #         for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
+        #             ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=True)
+        #             predictor = np.concatenate((predictor, ds), axis=0)
+        #     if len(self.target_vars) > 1:
+        #         for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
+        #             ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=False)
+        #             target = np.concatenate((target, ds), axis=0)
+    
+        #     ## Add terrain layers as last channels
+        #     if self.with_hrrr_terrain:
+        #         terr = (self.terrain_hrrr_normed[self.coords[0]:self.coords[1], self.coords[2]:self.coords[3]])[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+        #     if self.with_urma_terrain:
+        #         terr = (self.terrain_urma_normed[self.coords[0]:self.coords[1], self.coords[2]:self.coords[3]])[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+        #     if self.with_diff_terrain:
+        #         terr = (self.terrain_diff_normed[self.coords[0]:self.coords[1], self.coords[2]:self.coords[3]])[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+
+        # else: #load all of CONUS
+        #     ## Start with the first variable for each of predictor and target
+        #     predictor = self.get_normed_data_at_idx(0, idx, is_predictor=True)
+        #     target = self.get_normed_data_at_idx(0, idx, is_predictor=False)
+    
+        #     ## Add new channels for as many variables as we have
+        #     if len(self.predictor_vars) > 1:
+        #         for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
+        #             ds = self.get_normed_data_at_idx(i, idx, is_predictor=True)
+        #             predictor = np.concatenate((predictor, ds), axis=0)
+        #     if len(self.target_vars) > 1:
+        #         for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
+        #             ds = self.get_normed_data_at_idx(i, idx, is_predictor=False)
+        #             target = np.concatenate((target, ds), axis=0)
+
+        #     ## Add terrain layers as last channels
+        #     if self.with_hrrr_terrain:
+        #         terr = (self.terrain_hrrr_normed)[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+        #     if self.with_urma_terrain:
+        #         terr = (self.terrain_urma_normed)[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+        #     if self.with_diff_terrain:
+        #         terr = (self.terrain_diff_normed)[np.newaxis,:,:]
+        #         predictor = np.concatenate((predictor, terr), axis=0)
+
+        
+        # return (predictor), (target)
 
         
