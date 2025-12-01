@@ -17,7 +17,7 @@ class HRRR_URMA_Dataset(Dataset):
         OPTIONS:
         ---------------------------------------------------------------
         - is_train --> bool to load either training or testing datasets
-        - predictor_vars --> list of strings of the predictor variables to use, selected by their variable name. Valid options as of 2025/09/23: 
+        - predictor_vars --> list of strings of the predictor variables to use, selected by their variable name. Valid options as of 2025/12/01: 
             - "pressurf"
             - "t2m"
             - "d2m"
@@ -66,14 +66,14 @@ class HRRR_URMA_Dataset(Dataset):
         ######################################
         ## Initialize arrays to contain each variable's data/attributes
         
-        self.xr_datasets_pred = [] #list of length == len(self.predictor_vars), containing the raw xarray dataset for each predictor variable, in order
-        self.xr_datasets_targ = [] #same, but for target vars
+        self.xr_datasets_predictor = [] #list of length == len(self.predictor_vars), containing the raw xarray dataset for each predictor variable, in order
+        self.xr_datasets_target = [] #same, but for target vars
         
         #These will be a list of lists; these sublists will be of length 1 (holdover from previous code, but works fine here)
-        self.datasets_pred_normed_means = [] 
-        self.datasets_targ_normed_means = []
-        self.datasets_pred_normed_stddevs = [] 
-        self.datasets_targ_normed_stddevs = []
+        self.datasets_predictor_normed_means = [] 
+        self.datasets_target_normed_means = []
+        self.datasets_predictor_normed_stddevs = [] 
+        self.datasets_target_normed_stddevs = []
 
         #########################################
         ## Normalize terrain field
@@ -102,30 +102,42 @@ class HRRR_URMA_Dataset(Dataset):
         
         for var_name in self.predictor_vars:
             start = time.time()
-            data_save_path = self.get_var_filepath(var_name, is_pred=True)
+            data_save_path = self.get_var_filepath(var_name, is_predictor=True)
             
-            self.xr_datasets_pred.append(xr.open_dataarray(data_save_path, decode_timedelta=True, engine='cfgrib'))
+            self.xr_datasets_predictor.append(xr.open_dataarray(data_save_path, decode_timedelta=True, engine='cfgrib'))
             
-            self.datasets_pred_normed_means.append(self.C.hrrr_means_dict[train_test_str][var_name])
-            self.datasets_pred_normed_stddevs.append(self.C.hrrr_stddevs_dict[train_test_str][var_name])
+            self.datasets_predictor_normed_means.append(self.C.hrrr_means_dict[train_test_str][var_name])
+            self.datasets_predictor_normed_stddevs.append(self.C.hrrr_stddevs_dict[train_test_str][var_name])
             print(f"Predictor data for {var_name} loaded. Time taken = {time.time()-start:.1f} sec")
 
         for var_name in self.target_vars:
             start = time.time()
-            data_save_path = self.get_var_filepath(var_name, is_pred=False)
+            data_save_path = self.get_var_filepath(var_name, is_predictor=False)
 
-            self.xr_datasets_targ.append(xr.open_dataarray(data_save_path, decode_timedelta=True, engine='cfgrib'))
+            self.xr_datasets_target.append(xr.open_dataarray(data_save_path, decode_timedelta=True, engine='cfgrib'))
             
-            self.datasets_targ_normed_means.append(self.C.urma_means_dict[train_test_str][var_name]) 
-            self.datasets_targ_normed_stddevs.append(self.C.urma_stddevs_dict[train_test_str][var_name])
+            self.datasets_target_normed_means.append(self.C.urma_means_dict[train_test_str][var_name]) 
+            self.datasets_target_normed_stddevs.append(self.C.urma_stddevs_dict[train_test_str][var_name])
             print(f"Target data for {var_name} loaded. Time taken = {time.time()-start:.1f} sec")
             
         
-        ## 2025-11-08 NEED TO FIX THIS so all variable's indices are checked!
-        self.predictor_indices = np.arange(len(self.xr_datasets_pred[0]))
-        self.target_indices = np.arange(len(self.xr_datasets_targ[0]))
+        ## Index checking to ensure all samples are present
+        ## Two checks: first, both predictor and target arrays check their lengths against themselves to ensure all variables have the same # of indices, then once that's passed, check the lengths of predictor vs target vars to make sure they're the same 
 
-        assert len(self.predictor_indices) == len(self.target_indices), "Predictor indices array should be of the same length as the target indices array"
+        ## First check
+        if len(self.xr_datasets_predictor) > 1: #if there's not multiple predictor vars, there's nothing to do here
+            for i in np.arange(len(self.xr_datasets_predictor)-1):
+                assert len(self.xr_datasets_predictor[i])==len(self.xr_datasets_predictor[i+1]), f"ERROR: mismatch in lengths of predictors ({self.predictor_vars[i]} vs. {self.predictor_vars[i+1]})"
+        if len(self.xr_datasets_target) > 1: #if there's not multiple target vars, there's nothing to do here
+            for i in np.arange(len(self.xr_datasets_target)-1):
+                assert len(self.xr_datasets_target[i])==len(self.xr_datasets_target[i+1]), f"ERROR: mismatch in lengths of targets ({self.target_vars[i]} vs. {self.target_vars[i+1]})"
+
+        ## Second check
+        # If the first check was passed, all predictor vars have the same length, and likewise for target vars, so we can just compare the first entries of each list. This also works in the case of 1 predictor var and/or 1 target var 
+        self.predictor_indices = np.arange(len(self.xr_datasets_predictor[0]))
+        self.target_indices = np.arange(len(self.xr_datasets_target[0]))
+
+        assert len(self.predictor_indices) == len(self.target_indices), f"ERROR: lengths of predictor and target arrays are not the same!"
 
         print("DATASET CONSTRUCTION DONE")
         
@@ -166,11 +178,11 @@ class HRRR_URMA_Dataset(Dataset):
 
     #########################################
 
-    def get_var_filepath(self, var_name, is_pred=True):
+    def get_var_filepath(self, var_name, is_predictor=True):
         """
         Inputs: 
             - var_name --> string (e.g. "t2m", "d2m", etc). Can be "terrain" to load terrain data as well
-            - is_pred --> bool to control if predictor or target filepath is returned
+            - is_predictor --> bool to control if predictor or target filepath is returned
         Output: relevant full filepath(s) for that var, as a string
         """
         
@@ -180,12 +192,12 @@ class HRRR_URMA_Dataset(Dataset):
             return terrain_path_hrrr, terrain_path_urma
         else:
             if self.is_train:
-                if is_pred:
+                if is_predictor:
                     data_save_path = f"{self.C.DIR_TRAIN_TEST}/train_hrrr_alltimes_CONUS_{var_name}_f01.grib2" 
                 else:
                     data_save_path = f"{self.C.DIR_TRAIN_TEST}/train_urma_alltimes_CONUS_{var_name}.grib2"
             else:
-                if is_pred:
+                if is_predictor:
                     data_save_path = f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_CONUS_{var_name}_f01.grib2" 
                 else:
                     data_save_path = f"{self.C.DIR_TRAIN_TEST}/test_urma_alltimes_CONUS_{var_name}.grib2"
@@ -236,14 +248,14 @@ class HRRR_URMA_Dataset(Dataset):
 
     #########################################
     
-    def get_normed_data_at_idx(self, i, idx, is_pred=True, is_patches=False, coords=None):
+    def get_normed_data_at_idx(self, i, idx, is_predictor=True, is_patches=False, coords=None):
         """
         Helper function to be used in __getitem__. 
         Note: relies on datasets/means/stddevs in list to be ordered the same as the order in predictor_vars or target_vars, but the lists are constructed this way in the main function, so not that big of a deal for use in __getitem__. Be careful if calling this in an outside script, though!
         Inputs:
             - i --> int of index of current variable in relation to predictor_vars or target_vars
             - idx --> int of actual index to select
-            - is_pred --> bool to select from the correct list (predictor/target)
+            - is_predictor --> bool to select from the correct list (predictor/target)
             - is_patches --> bool to set if this method returns a patch (determined by coords) or not. Should generally be set by self.is_patches, but left as an argument here in case an outside function wants to modify this behavior for its own purposes
             - coords --> None (default) if is_patches=False, or else a 4-tuple array containing the indices of the domain to be selected, already calculated in the calling function.
                 - ORDERING: ['south_lat_idx', 'north_lat_idx', 'west_lon_idx', 'east_lon_idx']
@@ -253,15 +265,15 @@ class HRRR_URMA_Dataset(Dataset):
             - array of output of variable @ location i, index=idx, normed (subtract mean and divide by stddev), and appended with newaxis for concat purposes (note that calling functions outside of __getitem__ may not want this last feature; if this is the case, manually strip out this axis)
         """
         if is_patches:
-            if is_pred: #select from pred data
-                return ((self.xr_datasets_pred[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_pred_normed_means[i])/self.datasets_pred_normed_stddevs[i])[np.newaxis,:,:]
-            else: #select from targ data
-                return ((self.xr_datasets_targ[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_targ_normed_means[i])/self.datasets_targ_normed_stddevs[i])[np.newaxis,:,:]
+            if is_predictor: #select from predictor data
+                return ((self.xr_datasets_predictor[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_predictor_normed_means[i])/self.datasets_predictor_normed_stddevs[i])[np.newaxis,:,:]
+            else: #select from target data
+                return ((self.xr_datasets_target[i][idx][coords[0]:coords[1], coords[2]:coords[3]].data - self.datasets_target_normed_means[i])/self.datasets_target_normed_stddevs[i])[np.newaxis,:,:]
         else:
-            if is_pred: #select from pred data
-                return ((self.xr_datasets_pred[i][idx].data - self.datasets_pred_normed_means[i])/self.datasets_pred_normed_stddevs[i])[np.newaxis,:,:]
-            else: #select from targ data
-                return ((self.xr_datasets_targ[i][idx].data - self.datasets_targ_normed_means[i])/self.datasets_targ_normed_stddevs[i])[np.newaxis,:,:]
+            if is_predictor: #select from predictor data
+                return ((self.xr_datasets_predictor[i][idx].data - self.datasets_predictor_normed_means[i])/self.datasets_predictor_normed_stddevs[i])[np.newaxis,:,:]
+            else: #select from target data
+                return ((self.xr_datasets_target[i][idx].data - self.datasets_target_normed_means[i])/self.datasets_target_normed_stddevs[i])[np.newaxis,:,:]
 
     #########################################
     
@@ -280,17 +292,17 @@ class HRRR_URMA_Dataset(Dataset):
                            sw_corner_idxs[1], sw_corner_idxs[1]+C.PATCH_SIZE]
     
             ## Start with the first variable for each of predictor and target
-            predictor = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_pred=True)
-            target = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_pred=False)
+            predictor = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=True)
+            target = self.get_normed_data_at_idx_and_patch(0, idx, self.coords, is_predictor=False)
     
             ## Add new channels for as many variables as we have
             if len(self.predictor_vars) > 1:
                 for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_pred=True)
+                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=True)
                     predictor = np.concatenate((predictor, ds), axis=0)
             if len(self.target_vars) > 1:
                 for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_pred=False)
+                    ds = self.get_normed_data_at_idx_and_patch(i, idx, self.coords, is_predictor=False)
                     target = np.concatenate((target, ds), axis=0)
     
             ## Add terrain layers as last channels
@@ -306,17 +318,17 @@ class HRRR_URMA_Dataset(Dataset):
 
         else: #load all of CONUS
             ## Start with the first variable for each of predictor and target
-            predictor = self.get_normed_data_at_idx(0, idx, is_pred=True)
-            target = self.get_normed_data_at_idx(0, idx, is_pred=False)
+            predictor = self.get_normed_data_at_idx(0, idx, is_predictor=True)
+            target = self.get_normed_data_at_idx(0, idx, is_predictor=False)
     
             ## Add new channels for as many variables as we have
             if len(self.predictor_vars) > 1:
                 for i, var_name in enumerate(self.predictor_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx(i, idx, is_pred=True)
+                    ds = self.get_normed_data_at_idx(i, idx, is_predictor=True)
                     predictor = np.concatenate((predictor, ds), axis=0)
             if len(self.target_vars) > 1:
                 for i, var_name in enumerate(self.target_vars[1:]): #don't double up on index 0
-                    ds = self.get_normed_data_at_idx(i, idx, is_pred=False)
+                    ds = self.get_normed_data_at_idx(i, idx, is_predictor=False)
                     target = np.concatenate((target, ds), axis=0)
 
             ## Add terrain layers as last channels
