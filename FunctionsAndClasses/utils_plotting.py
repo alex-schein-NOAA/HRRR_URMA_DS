@@ -1,10 +1,10 @@
-from HEADER_torch import *
-from HEADER_utilities import *
-from HEADER_plotting import *
+from FunctionsAndClasses.HEADER_torch import *
+from FunctionsAndClasses.HEADER_utilities import *
+from FunctionsAndClasses.HEADER_plotting import *
 
-from CONSTANTS import *
-from utils_data import *
-from utils_miscellaneous import *
+from FunctionsAndClasses.CONSTANTS import *
+from FunctionsAndClasses.utils_data import *
+from FunctionsAndClasses.utils_miscellaneous import *
 
 ######################################################################################################################################################
 

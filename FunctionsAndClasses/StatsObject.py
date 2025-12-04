@@ -1,10 +1,10 @@
-from CONSTANTS import *
+from FunctionsAndClasses.CONSTANTS import *
 
-from HEADER_utilities import *
-from HEADER_torch import *
+from FunctionsAndClasses.HEADER_utilities import *
+from FunctionsAndClasses.HEADER_torch import *
 
-from DefineModelAttributes import *
-from HRRR_URMA_Dataset import * #might not be needed
+from FunctionsAndClasses.DefineModelAttributes import *
+from FunctionsAndClasses.HRRR_URMA_Dataset import * #might not be needed
 
 ######################################################################################################################################################
 
@@ -111,7 +111,6 @@ class StatsObject():
                     print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_targ[0]))*100:.0f}% done")
         else:
             print(f"Regional RMSE not yet implemented")
-        
         return
 
     #########################################
