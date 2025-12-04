@@ -216,10 +216,10 @@ def crop_input(data_to_crop, data_for_mask, return_xr=False):
 ########################################################
 
 def crop_to_intersection_of_inputs(predictor,
-                                    model_1_output,
-                                    model_2_output,
-                                    target=None,
-                                    return_xr=False
+                                   model_1_output,
+                                   model_2_output,
+                                   target=None,
+                                   return_xr=False
                                    ):
     """ 
     Function to do restriction of data to a shared domain between model_1_output (assumed to have the same region as predictor) and model_2_output.
@@ -269,7 +269,7 @@ def restrict_to_region(data,
                       ):
     """ 
     Restricts input data (i.e. an array or xr object) to the defined region. Data must be HRRR/URMA/model output/Smartinit formatted, i.e. origin @ SW corner of the domain.
-    Stores some commonly used domains for data that has already been restricted to the intersection of the HRRR and Smartinit regions, i.e. data that is 1358 x 2145. 
+    Stores some commonly used domains for data WHICH HAS ALREADY BEEN RESTRICTED to the intersection of the HRRR and Smartinit regions, i.e. data that is 1358 x 2145. 
     !! Calling function must do this restriction beforehand !!! Use crop_to_intersection_of_inputs
 
     Inputs:
