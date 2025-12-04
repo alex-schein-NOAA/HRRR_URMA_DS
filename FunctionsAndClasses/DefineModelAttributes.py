@@ -117,7 +117,7 @@ class DefineModelAttributes():
         if self.dataset is None:
             print(f"Making dataset for model {self.savename}")
 
-            if is_patches:
+            if self.is_patches:
                 print(f"is_patches = {self.is_patches}; making patches dataset")
             else:
                 print(f"is_patches = {self.is_patches}; making CONUS dataset")
@@ -182,6 +182,11 @@ class DefineModelAttributes():
         print(f"Model attributes set from {savename}")
         self.create_savename() #needs to be re-called to properly set attributes
         print(f"Savename set to {self.savename}")
+
+        if self.dataset is not None: #edge case for if this was run with an old savename
+            print(f"A dataset already exists under old parameters. Rerunning .create_dataset() to fix this")
+            self.dataset=None
+            self.create_dataset()
         
         return
         
@@ -212,7 +217,7 @@ class DefineModelAttributes():
                     self.model = UNet_simple(n_channels_in=self.num_channels_in, n_channels_out=self.num_channels_out)
                     print(f"Model architecture set: UNet_simple")
             else:
-                print(f"Model architecture was already set previously! Set ''self.model=None'' and rerun this function if a new model architecture is desired")
+                print(f"Model architecture was already set previously. Set ''self.model=None'' and rerun this function if a new model architecture is desired")
 
         return
 

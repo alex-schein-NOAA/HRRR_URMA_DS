@@ -3,6 +3,8 @@ from FunctionsAndClasses.CONSTANTS import *
 from FunctionsAndClasses.HEADER_torch import *
 from FunctionsAndClasses.HEADER_utilities import *
 
+from FunctionsAndClasses.utils_data import *
+
 #######################################################################################################################
 
 class HRRR_URMA_Dataset(Dataset):
@@ -62,7 +64,7 @@ class HRRR_URMA_Dataset(Dataset):
                 self.with_diff_terrain = True
 
         #This is static for a given patch size; preload it so it doesn't get called every time in __getitem__ (though the rest of it does need to be called there)
-        self.valid_region_for_patch_sw_corner = get_valid_region_mask(PATCH_SIZE=C.PATCH_SIZE) #might need to be tweaked
+        self.valid_region_for_patch_sw_corner = get_valid_region_mask(PATCH_SIZE=self.C.PATCH_SIZE) #might need to be tweaked
 
         ######################################
         ## Initialize arrays to contain each variable's data/attributes
@@ -248,8 +250,8 @@ class HRRR_URMA_Dataset(Dataset):
     
             # ORDERING: ['south_lat_idx', 'north_lat_idx', 'west_lon_idx', 'east_lon_idx']
             # Useful to have this as an object variable rather than local, for plotting purposes in outside functions
-            self.coords = [sw_corner_idxs[0], sw_corner_idxs[0]+C.PATCH_SIZE,
-                           sw_corner_idxs[1], sw_corner_idxs[1]+C.PATCH_SIZE]
+            self.coords = [sw_corner_idxs[0], sw_corner_idxs[0]+self.C.PATCH_SIZE,
+                           sw_corner_idxs[1], sw_corner_idxs[1]+self.C.PATCH_SIZE]
         else:
             self.coords = None
 
