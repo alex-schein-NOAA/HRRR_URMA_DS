@@ -1,11 +1,15 @@
-from FunctionsAndClasses.HEADER_torch import *
-from FunctionsAndClasses.HEADER_utilities import *
-from FunctionsAndClasses.HEADER_HRRR_URMA_Datasets_AllVars import *
-from FunctionsAndClasses.HEADER_models import *
-from FunctionsAndClasses.DefineModelAttributes import *
 from FunctionsAndClasses.CONSTANTS import *
 
+from FunctionsAndClasses.HEADER_torch import *
+from FunctionsAndClasses.HEADER_utilities import *
+from FunctionsAndClasses.HEADER_models import *
+
+from FunctionsAndClasses.DefineModelAttributes import *
+from FunctionsAndClasses.HRRR_URMA_Dataset import *
+
 import torch.optim.lr_scheduler as lr_scheduler
+
+###############
 
 C = CONSTANTS()
 
@@ -26,25 +30,22 @@ def TrainOneModel(current_model_attrs,
     Defaults to using 2 GPUs (default per Ursa interactive node) but this is tunable with input params
     
     Inputs:
-        - current_model_attrs = DefineModelAttributes object whose parameters have already been defined. 
-            - MUST INVOKE THE FOLLOWING CLASS METHODS AHEAD OF TIME:
-                - .create_dataset()
-                - .set_model_architecture()
-        - resume_from_checkpoint = bool to define if an existing model will be loaded from the input model's .savename and continue to be trained
-            - Reads the # of epochs the model WAS trained for from current_model_attrs.NUM_EPOCHS, so make sure this was correctly set from set_model_attrs_from_savename() or manually set! This function will then continue to train for additional_epochs (e.g. if model was trained for 20 epochs, then called in this function with additional_epochs=80, the result will have been trained for, effectively, 100 epochs)
-            - Sets current_model_attrs.NUM_EPOCHS to that+additional_epochs, so savename will be correct
-            - TO DO (as of 2025-09-11): implement a better save than just the model weights; should include epoch #, optimizer weights as well
-        - additional_epochs = int of the # of epochs to train for, if resume_from_checkpoint=True
-        - catch_loss_explosion = bool to control if the model gets reverted if its loss explodes. Should generally be true, but manually set to False when training on experimental model architectures that .set_model_architecture can't handle
-        - INITIAL_LEARNING_RATE = initial learning rate that the training will start with. Will be dynamically adjusted downwards by a factor of 0.1 if no improvement is seen for 10 epochs or ~10% of the requested # of epochs (whichever is lower)
-        - NUM_GPUS_TO_USE = int for # GPUs to use with DataParallel and num_workers
-        - NUM_WORKERS = int to set # workers per GPU. With patches dataset, should be set higher than 4 - be careful of exceeding the requested # of CPUs though!
-        - TRAINING_LOG_FILEPATH = filepath to save training log to, including file name - should generally not be changed unless training multiple models simultaneously
-        - TRAINED_MODEL_SAVEPATH = filepath to save trained models to - might need to differ if doing different losses, num epochs, etc
+        - current_model_attrs --> DefineModelAttributes object whose parameters have already been defined. MUST INVOKE THE FOLLOWING CLASS METHODS AHEAD OF TIME:
+            > .create_dataset()
+            > .set_model_architecture()
+        - resume_from_checkpoint --> bool to define if an existing model will be loaded from the input model's .savename and continue to be trained
+            > Reads the # of epochs the model WAS trained for from checkpoint_model_attrs.NUM_EPOCHS, so make sure this was correctly set from set_model_attrs_from_savename() or manually set! This function will then continue to train for additional_epochs (e.g. if model was trained for 20 epochs, then called in this function with additional_epochs=80, the result will have been trained for, effectively, 100 epochs)
+            > Sets current_model_attrs.NUM_EPOCHS to that+additional_epochs, so savename will be correct
+        - checkpoint_model_attrs --> instance of DefineModelAttributes, usually set from .set_model_attrs_from_savename(), whose NUM_EPOCHS parameter defines the starting point for resuming training and whose weights will be used for initialization. 
+        - catch_loss_explosion --> bool to control if the model gets reverted if its loss explodes. Should generally be true, but manually set to False when training on experimental model architectures that .set_model_architecture can't handle
+        - INITIAL_LEARNING_RATE --> initial learning rate that the training will start with. Will be dynamically adjusted downwards by a factor of 0.1 if no improvement is seen for 10 epochs or ~10% of the requested # of epochs (whichever is lower)
+        - NUM_GPUS_TO_USE --> int for # GPUs to use with DataParallel and num_workers
+        - NUM_WORKERS --> int to set # workers per GPU. With patches dataset, should be set higher than 4 - be careful of exceeding the requested # of CPUs though!
+        - TRAINING_LOG_FILEPATH --> filepath to save training log to, including file name - should generally not be changed unless training multiple models simultaneously
+        - TRAINED_MODEL_SAVEPATH --> filepath to save trained models to - might need to differ if doing different losses, num epochs, etc
     """
     
     MULTIGPU_BATCH_SIZE = current_model_attrs.BATCH_SIZE*NUM_GPUS_TO_USE
-
 
     if resume_from_checkpoint:
         if checkpoint_model_attrs is not None:
