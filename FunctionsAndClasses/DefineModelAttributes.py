@@ -90,16 +90,16 @@ class DefineModelAttributes():
 
         # Doesn't play nice if defined within the f-string
         # Making as variables so these can be called independently for other plotting purposes (don't forget to add "pred" and "targ" in calling code!)
-        self.pred_str = "-".join(self.predictor_vars)
-        self.targ_str = "-".join(self.target_vars)
+        self.predictor_str = "-".join(self.predictor_vars)
+        self.target_str = "-".join(self.target_vars)
 
         savename_attrs_list = [residual_str, 
                                attn_str,
                                f"BS{self.BATCH_SIZE}", 
                                f"NE{self.NUM_EPOCHS}", 
                                f"{terrain_str}", 
-                               f"pred({self.pred_str})", 
-                               f"targ({self.targ_str})"]
+                               f"pred({self.predictor_str})", 
+                               f"targ({self.target_str})"]
         
         self.savename = "_".join([x for x in savename_attrs_list if x !=""])
         
@@ -129,7 +129,7 @@ class DefineModelAttributes():
                                              with_terrains = self.with_terrains)
             
             # Returns a list of dt.datetime objects of all dates in the current dataset. Useful for plotting and time series stuff
-            self.dataset_date_list = [dt.datetime.strptime(str(np.datetime_as_string(date, unit='s')), "%Y-%m-%dT%H:%M:%S") for date in self.dataset.xr_datasets_pred[0].valid_time.data]
+            self.dataset_date_list = [dt.datetime.strptime(str(np.datetime_as_string(date, unit='s')), "%Y-%m-%dT%H:%M:%S") for date in self.dataset.xr_datasets_predictor[0].valid_time.data]
         
         else:
             print(f"Dataset for the model {self.savename} was already computed. If it needs to be recomputed, set [current model].dataset=None and rerun .create_dataset()")
@@ -252,6 +252,6 @@ class DefineModelAttributes():
 
         if (not is_different_path) and (self.savename != model_savename):
             self.savename = model_savename #generally we want this to match the calling savename
-            print(f"Savename set to ''{self.savename}'' - rerun .create_save_name() if this is not desired")
+            print(f"Savename set to ''{self.savename}'' - rerun .create_savename() if this is not desired")
         
         return
