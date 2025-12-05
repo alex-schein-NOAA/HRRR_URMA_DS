@@ -50,16 +50,16 @@ def get_model_output_at_idx(model_attrs,
         model_output = model(predctor_gpu.float())
         model_output = model_output.cpu().numpy()
     
-    date = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(predictor_var)][idx].valid_time.data
+    date = model_attrs.dataset.xr_datasets_predictor[model_attrs.predictor_vars.index(predictor_var)][idx].valid_time.data
     dt_current = dt.datetime.strptime(str(np.datetime_as_string(date, unit='m')), "%Y-%m-%dT%H:%M")
     
     if is_unnormed:
-        predictor = model_attrs.dataset.xr_datasets_pred[model_attrs.predictor_vars.index(predictor_var)][idx].data
+        predictor = model_attrs.dataset.xr_datasets_predictor[model_attrs.predictor_vars.index(predictor_var)][idx].data
         target = model_attrs.dataset.xr_datasets_target[model_attrs.target_vars.index(target_var)][idx].data
 
-        model_output = ( model_attrs.dataset.datasets_targ_normed_stddevs[model_attrs.target_vars.index(target_var)]
+        model_output = ( model_attrs.dataset.datasets_target_normed_stddevs[model_attrs.target_vars.index(target_var)]
                          *model_output[0,model_attrs.target_vars.index(target_var),:] 
-                         + model_attrs.dataset.datasets_targ_normed_means[model_attrs.target_vars.index(target_var)] )
+                         + model_attrs.dataset.datasets_target_normed_means[model_attrs.target_vars.index(target_var)] )
     
     else: #model output is already normed
         predictor = predictor[0,model_attrs.predictor_vars.index(predictor_var),:]
