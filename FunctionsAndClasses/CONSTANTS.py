@@ -35,8 +35,8 @@ class CONSTANTS():
 
         # For plot labeling purposes
         self.varname_units_dict = {"pressurf":"Pa",
-                                   "t2m":"deg K",
-                                   "d2m":"deg K",
+                                   "t2m":"deg C",
+                                   "d2m":"deg C",
                                    "spfh2m":"kg/kg",
                                    "u10m":"m/s",
                                    "v10m":"m/s"}
