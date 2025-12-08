@@ -239,6 +239,47 @@ def plot_model_vs_model_error(model_1_output,
 
 ########################################################
 
+def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_attrs=None, TARG_VAR='t2m', is_zonal=True, denom=3):
+    """
+    Function to plot gradient difference between input (could be model or Smartinit) and target (i.e. URMA).
+    At minimum, should be cropped to the intersection of regions, but can be cropped further before being input here.
+
+    Inputs:
+        - input_cropped --> array of input data, either from model_output or Smartinit, cropped to whatever region
+        - target_cropped --> same but for URMA data
+        - dt_current --> dt.datetime from get_model_output_at_idx
+        - model_attrs --> DefineModelAttrs object for the model, if it is a model. Leave as None for Smartinit
+        - TARG_VAR --> str of target variable, e.g. 't2m'
+        - is_zonal --> bool to determine if gradient is taken zonally or meridionally. Default = True (zonal gradient)
+        - denom --> int or float to determine color scale. Default = 3 which works well for t2m but can be adjusted per variable
+    """
+    C = CONSTANTS()
+    
+    if model_attrs==None:
+        str_model="Smartinit" 
+    else: 
+        str_model=model_attrs.savename
+    
+    if is_zonal:
+        grad_diff = np.gradient(input_cropped, 2.5)[1] - np.gradient(target_cropped, 2.5)[1]
+        str_z_or_m = "zonal"
+    else:
+        grad_diff = np.gradient(input_cropped, 2.5)[0] - np.gradient(target_cropped, 2.5)[0]
+        str_z_or_m = "meridional"
+
+    max_grad = np.nanmax(np.abs(grad_diff))/denom
+
+    fig = plt.subplots(1,1,figsize=(14,7))
+    plt.imshow(grad_diff, origin='lower', cmap='bwr', vmin=-1*max_grad, vmax=max_grad)
+    cbar=plt.colorbar(fraction=0.02, pad=0.01)
+    cbar.set_label(f"Gradient difference ({C.varname_units_dict[TARG_VAR]} per km)")
+    plt.axis("off")
+    plt.title(f"Difference in {str_z_or_m} gradient, model minus target, {TARG_VAR} \n Model = {str_model} | {dt_current}")
+
+    return
+
+########################################################
+
 def plot_model_vs_smartinit_RMSE(model_attrs, 
                                  statsobj_model, 
                                  statsobj_smartinit, 
@@ -390,3 +431,4 @@ def plot_training_loss(TRAINING_LOG_FILEPATH, title_str="", epoch_offset=0, wind
     plt.title(f"Training loss, {title_str}")
 
     return
+
