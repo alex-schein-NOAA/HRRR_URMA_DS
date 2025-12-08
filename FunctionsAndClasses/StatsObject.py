@@ -164,11 +164,11 @@ class StatsObject():
         Masks data (either Smartinit or HRRR, depending on if self.is_smartinit=True/False respectively) to the intersection of Smartinit/HRRR regions, then returns the domain average RMSE (float), as compared to urma_arr.
         """
         
-        _, model_output_arr, smartinit_arr, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, model_output_arr, smartinit_arr, urma_arr)
-        
         if self.is_smartinit:
+            _, _, smartinit_arr, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, smartinit_arr, smartinit_arr, target=urma_arr)
             diff_arr = smartinit_arr - urma_arr
         else:
+            _, model_output_arr, _, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, model_output_arr, smartinit_arr, target=urma_arr)
             diff_arr = model_output_arr - urma_arr
    
         return np.sqrt(np.nanmean(diff_arr**2))
