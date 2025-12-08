@@ -274,11 +274,14 @@ def restrict_to_region(data,
 
     Inputs:
         - data --> input data to be restricted. Must be formatted as above
-        - RESTR_ORIGIN_[LAT/LON]_IDX --> int to define the SW corner lat/lon 
-        - RESTR_PATCH_SIZE_[LAT/LON] --> int to define the north/east extent of the selection, respectively
+        - RESTR_ORIGIN_[LAT/LON]_IDX --> ints to define the SW corner lat/lon 
+        - RESTR_PATCH_SIZE_[LAT/LON] --> ints to define the north/east extent of the selection, respectively
         - region_keyword --> string (case-sensitive) of the region to select, if any. Valid options as follows:
             > "Colorado" --> 200x200 patch over the Colorado Rockies
             > "California" --> 350x200 lat/lon patch over California (and a bit of the surrounding area)
+            > "West" --> 750x750 patch over the western US (designed to be close to the MPAS west domain)
+            > "Appalachia" --> 400x330 lat/lon patch over the Appalachian mountains and surrounding areas 
+            > "Great Lakes" --> 400x600 lat/lon patch over the Great Lakes region
 
     Output:
         - data, restricted to whatever region is defined
@@ -294,6 +297,26 @@ def restrict_to_region(data,
         RESTR_ORIGIN_LON_IDX=80
         RESTR_PATCH_SIZE_LAT=350
         RESTR_PATCH_SIZE_LON=200
+    elif region_keyword=="West":
+        RESTR_ORIGIN_LAT_IDX=460
+        RESTR_ORIGIN_LON_IDX=50
+        RESTR_PATCH_SIZE_LAT=750
+        RESTR_PATCH_SIZE_LON=750
+    elif region_keyword=="Appalachia":
+        RESTR_ORIGIN_LAT_IDX=480
+        RESTR_ORIGIN_LON_IDX=1400
+        RESTR_PATCH_SIZE_LAT=400
+        RESTR_PATCH_SIZE_LON=330
+    elif region_keyword=="Great Lakes":
+        RESTR_ORIGIN_LAT_IDX=810
+        RESTR_ORIGIN_LON_IDX=1150
+        RESTR_PATCH_SIZE_LAT=400
+        RESTR_PATCH_SIZE_LON=600
+    elif region_keyword=="Northeast":
+        RESTR_ORIGIN_LAT_IDX=770
+        RESTR_ORIGIN_LON_IDX=1580
+        RESTR_PATCH_SIZE_LAT=450
+        RESTR_PATCH_SIZE_LON=450
 
     #Should add more regions here, namely east/west CONUS, great lakes, Appalachians 
     
