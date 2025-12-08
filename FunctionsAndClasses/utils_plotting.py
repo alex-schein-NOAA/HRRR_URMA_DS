@@ -57,7 +57,7 @@ def plot_predictor_output_truth_error(predictor,
     axes[2].imshow(target.squeeze(), cmap="coolwarm", vmin = mintemp, vmax = maxtemp, origin='lower')
     axes[2].set_title(f"Truth (URMA)")
     axes[2].axis("off")
-    pos = axes[3].imshow((model_output.squeeze() - target.squeeze()), cmap="coolwarm", vmin = -1*avg, vmax = avg, origin='lower') 
+    pos = axes[3].imshow((model_output.squeeze() - target.squeeze()), cmap="bwr", vmin = -1*avg, vmax = avg, origin='lower') 
     axes[3].set_title(f"Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})")
     axes[3].axis("off")
 
@@ -166,7 +166,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         plt.suptitle(f"{title} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
                 
         #Always make the last plot the error
-        pos = axes[-1].imshow((model_output.squeeze() - target.squeeze()), cmap='coolwarm', origin='lower', vmin=-1*avg, vmax=avg)
+        pos = axes[-1].imshow((model_output.squeeze() - target.squeeze()), cmap='bwr', origin='lower', vmin=-1*avg, vmax=avg)
         axes[-1].set_title(f"Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})")
         axes[-1].axis("off")
         cbar = fig.colorbar(pos, ax=axes[-1], fraction=0.0225, pad=0.01)
@@ -175,7 +175,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
     #If only the error plot is called, axes is not subscriptable
     if number_of_plots == 1:
         fig, axes = plt.subplots(number_of_plots, 1, figsize=(14, 7*number_of_plots)) #Single-pane plots seem to be much smaller than they should be, if using a universal scaling size
-        pos = axes.imshow((model_output.squeeze() - target.squeeze()), cmap='coolwarm', origin='lower', vmin=-1*avg, vmax=avg)
+        pos = axes.imshow((model_output.squeeze() - target.squeeze()), cmap='bwr', origin='lower', vmin=-1*avg, vmax=avg)
         axes.axis("off")
         cbar = fig.colorbar(pos, ax=axes, fraction=0.021, pad=0.01)
         cbar.set_label(f'Error ({error_units})')
@@ -225,7 +225,7 @@ def plot_model_vs_model_error(model_1_output,
     fig, axs = plt.subplots(1,1, figsize=(12,16))
 
     # Need to plot difference in ABSOLUTE errors, otherwise there's issues with negative regions
-    pos = axs.imshow((np.abs(model_1_output.squeeze()-targ.squeeze()) - (np.abs(model_2_output.squeeze()-targ.squeeze()))), cmap="coolwarm", origin='lower', vmin = -1*avg, vmax = avg)
+    pos = axs.imshow((np.abs(model_1_output.squeeze()-targ.squeeze()) - (np.abs(model_2_output.squeeze()-targ.squeeze()))), cmap="bwr", origin='lower', vmin = -1*avg, vmax = avg)
     axs.axis("off")
     cbar = fig.colorbar(pos, fraction=0.022, pad=0.01)
     cbar.set_label(f"Difference in {error_units}")
