@@ -15,6 +15,7 @@ class StatsObject():
     def __init__(self,
                  is_smartinit=False,
                  is_conus=True,
+                 region_keyword=None,
                  current_model_attrs=None,
                  predictor_var=None,
                  target_var=None
@@ -23,9 +24,9 @@ class StatsObject():
         """
         - Input vars:
             - is_smartinit --> bool; if True, then calculate stats relative to Smartinit, otherwise use the model in current_model_attrs.model
-            - is_conus --> bool, True is desiring stats over the CONUS region. As of 2025/12/03, False does nothing here, but should eventually be used as the flag to calculate over a specific region, which will need to be put as an input argument
+            - is_conus --> bool, True is desiring stats over the CONUS region. If False, stats will be calculated with respect to the region defined by region_keyword (see CONSTANTS for boundary indices).
                 > !!!! WILL ONLY CALCULATE STATS IN THE REGION OF OVERLAP BETWEEN SMARTINIT AND HRRR !!!! This is NOT the entire HRRR domain !!
-                > (2025/12/03) Need to add a region keyword argument to define a region to calculate stats over
+            - region_keyword --> str (or None) defining the region to work over, if is_conus==False. See CONSTANTS.region_keyword_dict for valid keywords/regions
             - current_model_attrs --> an instance of the DefineModelAttributes class. Doesn't need to have .model set already, as this class should take care of that
             - predictor_var --> string of the predictor var (e.g. 't2m'). Only used for get_model_output_at_idx call; needs to match at least one of the predictor variables in self.current_model_attrs.predictor_vars, but is otherwise not important, and is not used for Smartinit
             - target_var --> string (just one, not a list of multiple!) of the desired target variable whose quantities will be computed
@@ -38,6 +39,7 @@ class StatsObject():
         
         self.is_smartinit = is_smartinit
         self.is_conus = is_conus
+        self.region_keyword = region_keyword
         self.current_model_attrs = current_model_attrs
         self.predictor_var = predictor_var if current_model_attrs==None else current_model_attrs.predictor_vars[0] 
         self.target_var = target_var
@@ -77,8 +79,8 @@ class StatsObject():
     def calc_model_domain_avg_RMSE_alltimes(self):
         """
         Calculates domain average RMSE for the given model (in the input model_attrs).
-        Currently (as of 2025/12/03) this is only set up to calculate over the CONUS domain.
-        Uses only the overlapping region between Smartinit and the model output domains!
+        If is_conus==True, calculates over CONUS, using ONLY the overlapping region between Smartinit and the model output domains.
+        If is_conus==False, uses self.region_keyword to restrict to that subdomain 
 
         Uses self.nan_fill_value (default=0), so if this should be another value, change that before calling this function.
 
@@ -93,7 +95,7 @@ class StatsObject():
             self.current_model_attrs.set_model_weights(self.current_model_attrs.savename) #if the model savename can't be constructed by .create_savename(), then it needs to be manually set in the calling function before passing it to StatObjectConstructor. Same thing if using an architecture that can't be created by .set_model_architecture() - then manually set .model in the calling function before passing to ConstructStatObject
 
         if self.is_conus:
-            print(f"Calculating RMSE for all times ({self.target_var}, {self.current_model_attrs.savename})")
+            print(f"Calculating RMSE over CONUS for all times ({self.target_var}, {self.current_model_attrs.savename})")
             print(f"Using NaN fill value = {self.nan_fill_value} (standardized units)")
     
             xr_smartinit = get_smartinit_output_at_idx(i=0, target_var='t2m') #we only care about the mask
@@ -110,7 +112,23 @@ class StatsObject():
                 if i%int(len(self.current_model_attrs.dataset.xr_datasets_targ[0])/100)==0:
                     print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_targ[0]))*100:.0f}% done")
         else:
-            print(f"Regional RMSE not yet implemented")
+            print(f"Calculating RMSE over {self.region_keyword} for all times ({self.target_var}, {self.current_model_attrs.savename})")
+            xr_smartinit = get_smartinit_output_at_idx(i=0, target_var='t2m') #we only care about the mask
+            smartinit_data = xr_smartinit.data #need it in memory for speed reasons
+            for i in range(len(self.current_model_attrs.dataset.xr_datasets_targ[0])):
+                predictor, model_output, target, _ = get_model_output_at_idx(self.current_model_attrs, 
+                                                                             self.current_model_attrs.model, 
+                                                                             predictor_var=self.predictor_var, 
+                                                                             target_var=self.target_var, 
+                                                                             idx=i, 
+                                                                             is_nan=True, 
+                                                                             nan_fill_value=self.nan_fill_value)
+                _, model_output_cropped, _, target_cropped = crop_to_intersection_of_inputs(predictor, model_output, smartinit_data, target)
+                mo_r = restrict_to_region(model_output_cropped, region_keyword=self.region_keyword)
+                t_r = restrict_to_region(target_cropped, region_keyword=self.region_keyword)
+                self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((mo_r-t_r)**2)))
+                if i%int(len(self.current_model_attrs.dataset.xr_datasets_targ[0])/100)==0:
+                    print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_targ[0]))*100:.0f}% done")
         return
 
     #########################################
