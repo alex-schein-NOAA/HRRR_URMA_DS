@@ -188,7 +188,7 @@ def TrainOneModel_DDP(current_model_attrs,
         if epoch_loss <= lowest_loss: #only save models that have lower loss than the previous best
             lowest_loss = epoch_loss
             #Saving with .module.state_dict() should suffice for DDP as well
-            if rank==0: #don't want it to save many times at once, if loss is low across nodes
+            if rank==0: 
                 torch.save(current_model_attrs.model.module.state_dict(), f"{TRAINED_MODEL_SAVEPATH}/{current_model_attrs.savename}{appendation}_TEMP.pt")
                 print(f"New lowest loss - model saved @ epoch {epoch}")
             was_model_saved=True
