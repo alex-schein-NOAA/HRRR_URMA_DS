@@ -105,6 +105,30 @@ class CONSTANTS():
         ## Indexes for selection of patches for training
         self.PATCH_SIZE=400
 
-        
+        ## Region indices (relative to data that has already been restricted to the intersection of HRRR and Smartinit regions)
+        self.region_keyword_indices_dict = {"Colorado":{'RESTR_ORIGIN_LAT_IDX':630,
+                                                        'RESTR_ORIGIN_LON_IDX':600,
+                                                        'RESTR_PATCH_SIZE_LAT':200,
+                                                        'RESTR_PATCH_SIZE_LON':200},
+                                            "California":{'RESTR_ORIGIN_LAT_IDX':570,
+                                                          'RESTR_ORIGIN_LON_IDX':80,
+                                                          'RESTR_PATCH_SIZE_LAT':350,
+                                                          'RESTR_PATCH_SIZE_LON':200},
+                                            "West":{'RESTR_ORIGIN_LAT_IDX':460,
+                                                    'RESTR_ORIGIN_LON_IDX':50,
+                                                    'RESTR_PATCH_SIZE_LAT':750,
+                                                    'RESTR_PATCH_SIZE_LON':750},
+                                            "Appalachia":{'RESTR_ORIGIN_LAT_IDX':480,
+                                                          'RESTR_ORIGIN_LON_IDX':1400,
+                                                          'RESTR_PATCH_SIZE_LAT':400,
+                                                          'RESTR_PATCH_SIZE_LON':330},
+                                            "Great Lakes":{'RESTR_ORIGIN_LAT_IDX':810,
+                                                           'RESTR_ORIGIN_LON_IDX':1150,
+                                                           'RESTR_PATCH_SIZE_LAT':400,
+                                                           'RESTR_PATCH_SIZE_LON':600},
+                                            "Northeast":{'RESTR_ORIGIN_LAT_IDX':770,
+                                                         'RESTR_ORIGIN_LON_IDX':1580,
+                                                         'RESTR_PATCH_SIZE_LAT':450,
+                                                         'RESTR_PATCH_SIZE_LON':450} }
 
         
