@@ -274,7 +274,7 @@ def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_at
         str_z_or_m = "meridional"
 
     max_grad = np.nanmax(np.abs(grad_diff))/denom
-    grad_rmse = np.sqrt(np.nanmean(grad_diff)**2)
+    grad_rmse = np.sqrt(np.nanmean(grad_diff**2))
 
     fig = plt.subplots(1,1,figsize=(14,7))
     plt.imshow(grad_diff, origin='lower', cmap='bwr', vmin=-1*max_grad, vmax=max_grad)
