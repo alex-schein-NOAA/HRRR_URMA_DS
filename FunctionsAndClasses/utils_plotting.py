@@ -21,7 +21,7 @@ def plot_predictor_output_truth_error(predictor,
                                       save_fig=False, 
                                       save_dir=os.getcwd(), 
                                       fig_savename="temp.png", 
-                                      error_units="", 
+                                      units_str="", 
                                       avg_denom=10
                                      ):
     """
@@ -37,7 +37,7 @@ def plot_predictor_output_truth_error(predictor,
         - save_fig --> bool; if True, saves to save_dir 
         - save_dir --> string or filepath to master save directory. Default = current working directory
         - fig_savename --> string for file savename, if save_fig = True. Should include ".png"
-        - error_units --> string for error units, e.g. "deg K" (usually is f"{C.varname_units_dict[TARG_VAR]}")
+        - units_str --> string for units, e.g. "deg C" (usually is f"{C.varname_units_dict[TARG_VAR]}")
         - avg_denom --> how much to scale error plot by. Should be ~10 for temperature/wind vars, but for pressurf, should be ~150
     """
 
@@ -62,7 +62,7 @@ def plot_predictor_output_truth_error(predictor,
     axes[3].axis("off")
 
     cbar = fig.colorbar(pos, ax=axes[3], fraction=0.03) 
-    cbar.set_label(f'Error ({error_units})')
+    cbar.set_label(f'Error ({units_str})')
     
     plt.suptitle(f"{title} | Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
     plt.tight_layout()
@@ -85,7 +85,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
                                             use_smartinit_mask=False,
                                             date_str="DATE",
                                             title="MODEL NAME",
-                                            error_units="",
+                                            units_str="",
                                             save_fig=False, 
                                             save_dir=f"/scratch3/BMC/wrfruc/aschein/UNet_main", 
                                             fig_savename="temp.png", 
@@ -117,7 +117,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         - save_fig --> bool for saving; if True, saves to directory this script is called from (currently this function is not intended for formalized plot saving)
         - save_dir --> master save directory
         - fig_savename --> string for file savename, if to_save = True. Should include ".png" at the end
-        - error_units --> string (NOT including parentheses) for variable/error units, e.g. "deg K" (usually is f"{C.varname_units_dict[TARG_VAR]}")
+        - units_str --> string (NOT including parentheses) for variable/error units, e.g. "deg C" (usually is f"{C.varname_units_dict[TARG_VAR]}"). Special case if this is "deg C" (i.e. t2m or d2m); then a separate string is used for colorbar labels on the plots EXCEPT for error
         - avg_denom --> int for how much to scale error plot by. Should be ~10 normally, but for pressurf, should be ~150
     """
     
@@ -136,6 +136,12 @@ def plot_predictor_output_truth_error_CONUS(predictor,
     mintemp = np.nanmin([np.nanmin(predictor.squeeze()), np.nanmin(model_output.squeeze()), np.nanmin(target.squeeze())])
 
     avg = (maxtemp-mintemp)/avg_denom #Denominator chosen arbitrarily; adjust if needed
+
+    #Special case for t2m or d2m so the temperature plots have proper units
+    if units_str=="deg C":
+        units_str_new = "Kelvin"
+    else:
+        units_str_new = units_str
     
     #Break it down into cases. This flag structure is horrible and should be redone
     pred_flag = True
@@ -148,19 +154,19 @@ def plot_predictor_output_truth_error_CONUS(predictor,
                 pos = ax.imshow(predictor.squeeze(), cmap="coolwarm", vmin = mintemp, vmax = maxtemp, origin='lower')
                 ax.set_title(f"Predictor (HRRR 2.5km)")
                 cbar = fig.colorbar(pos, ax=ax, fraction=0.0225, pad=0.01)
-                cbar.set_label(f'{error_units}')
+                cbar.set_label(f'{units_str_new}')
                 pred_flag = False #skip this case in the next iteration, if there is one
             elif include_model_output and model_flag:
                 pos = ax.imshow(model_output.squeeze(), cmap="coolwarm", vmin = mintemp, vmax = maxtemp, origin='lower')
                 ax.set_title(f"Predicted")
                 cbar = fig.colorbar(pos, ax=ax, fraction=0.0225, pad=0.01)
-                cbar.set_label(f'{error_units}')
+                cbar.set_label(f'{units_str_new}')
                 model_flag = False
             elif include_target: #No flag needed here, as this will always be the last plot, i.e. end of for loop
                 pos = ax.imshow(target.squeeze(), cmap="coolwarm", vmin = mintemp, vmax = maxtemp, origin='lower')
                 ax.set_title(f"Truth (URMA)")
                 cbar = fig.colorbar(pos, ax=ax, fraction=0.0225, pad=0.01)
-                cbar.set_label(f'{error_units}')
+                cbar.set_label(f'{units_str_new}')
 
             ax.axis("off")
         plt.suptitle(f"{title} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
@@ -170,7 +176,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         axes[-1].set_title(f"Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})")
         axes[-1].axis("off")
         cbar = fig.colorbar(pos, ax=axes[-1], fraction=0.0225, pad=0.01)
-        cbar.set_label(f'Error ({error_units})')
+        cbar.set_label(f'Error ({units_str})')
 
     #If only the error plot is called, axes is not subscriptable
     if number_of_plots == 1:
@@ -178,7 +184,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         pos = axes.imshow((model_output.squeeze() - target.squeeze()), cmap='bwr', origin='lower', vmin=-1*avg, vmax=avg)
         axes.axis("off")
         cbar = fig.colorbar(pos, ax=axes, fraction=0.021, pad=0.01)
-        cbar.set_label(f'Error ({error_units})')
+        cbar.set_label(f'Error ({units_str})')
         plt.title(f"{title} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f} \n Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})", 
                   va="bottom", fontsize=14) #suptitle also looks bad
     
@@ -198,7 +204,7 @@ def plot_model_vs_model_error(model_1_output,
                               pred, 
                               targ, 
                               date_str, 
-                              error_units, 
+                              units_str, 
                               title_str=None, 
                               avg_denom=10
                              ):
@@ -211,7 +217,7 @@ def plot_model_vs_model_error(model_1_output,
         - model_2_output --> same but for model 2. Can also be Smartinit data
         - pred, targ --> predictor and target data (HRRR and URMA respectively) 
         - date_str --> should be dt_current from get_model_output_at_idx
-        - error_units --> string of the format f"{C.varname_units_dict[TARG_VAR]} (+ = [model 2]/[Smartinit] is better)"
+        - units_str --> string of the format f"{C.varname_units_dict[TARG_VAR]} (+ = [model 2]/[Smartinit] is better)"
         - title_str --> string describing the models, or model + smartinit. Should include a line break (\n) with {dt_current} in it
         - avg_denom --> int, same usage as other plotting functions, to control the scale of the colorbar
     """
@@ -228,7 +234,7 @@ def plot_model_vs_model_error(model_1_output,
     pos = axs.imshow((np.abs(model_1_output.squeeze()-targ.squeeze()) - (np.abs(model_2_output.squeeze()-targ.squeeze()))), cmap="bwr", origin='lower', vmin = -1*avg, vmax = avg)
     axs.axis("off")
     cbar = fig.colorbar(pos, fraction=0.022, pad=0.01)
-    cbar.set_label(f"Difference in {error_units}")
+    cbar.set_label(f"Difference in {units_str}")
     
     if title_str is None:
         title_str = f"Model 1 error minus Model 2 error \n {date_str}"
