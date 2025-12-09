@@ -290,9 +290,9 @@ def restrict_to_region(data,
     C = CONSTANTS()
 
     if not region_keyword==None:
-        RESTR_ORIGIN_LAT_IDX = C.region_keyword_indices_dict[region_keyword]['RESTR_ORIGIN_LAT_IDX']
-        RESTR_ORIGIN_LON_IDX = C.region_keyword_indices_dict[region_keyword]['RESTR_ORIGIN_LON_IDX']
-        RESTR_PATCH_SIZE_LAT = C.region_keyword_indices_dict[region_keyword]['RESTR_PATCH_SIZE_LAT']
-        RESTR_PATCH_SIZE_LON = C.region_keyword_indices_dict[region_keyword]['RESTR_PATCH_SIZE_LON']
+        RESTR_ORIGIN_LAT_IDX = C.region_keyword_dict[region_keyword]['RESTR_ORIGIN_LAT_IDX']
+        RESTR_ORIGIN_LON_IDX = C.region_keyword_dict[region_keyword]['RESTR_ORIGIN_LON_IDX']
+        RESTR_PATCH_SIZE_LAT = C.region_keyword_dict[region_keyword]['RESTR_PATCH_SIZE_LAT']
+        RESTR_PATCH_SIZE_LON = C.region_keyword_dict[region_keyword]['RESTR_PATCH_SIZE_LON']
     
     return data[RESTR_ORIGIN_LAT_IDX:RESTR_ORIGIN_LAT_IDX+RESTR_PATCH_SIZE_LAT, RESTR_ORIGIN_LON_IDX:RESTR_ORIGIN_LON_IDX+RESTR_PATCH_SIZE_LON]
