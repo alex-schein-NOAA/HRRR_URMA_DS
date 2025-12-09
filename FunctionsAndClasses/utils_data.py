@@ -282,42 +282,17 @@ def restrict_to_region(data,
             > "West" --> 750x750 patch over the western US (designed to be close to the MPAS west domain)
             > "Appalachia" --> 400x330 lat/lon patch over the Appalachian mountains and surrounding areas 
             > "Great Lakes" --> 400x600 lat/lon patch over the Great Lakes region
+            > "Northeast" --> 450x450 patch over the Northeast, roughly bottom of PA to top of ME
 
     Output:
         - data, restricted to whatever region is defined
     """
+    C = CONSTANTS()
 
-    if region_keyword=="Colorado":
-        RESTR_ORIGIN_LAT_IDX=630
-        RESTR_ORIGIN_LON_IDX=600
-        RESTR_PATCH_SIZE_LAT=200
-        RESTR_PATCH_SIZE_LON=200
-    elif region_keyword=="California":
-        RESTR_ORIGIN_LAT_IDX=570
-        RESTR_ORIGIN_LON_IDX=80
-        RESTR_PATCH_SIZE_LAT=350
-        RESTR_PATCH_SIZE_LON=200
-    elif region_keyword=="West":
-        RESTR_ORIGIN_LAT_IDX=460
-        RESTR_ORIGIN_LON_IDX=50
-        RESTR_PATCH_SIZE_LAT=750
-        RESTR_PATCH_SIZE_LON=750
-    elif region_keyword=="Appalachia":
-        RESTR_ORIGIN_LAT_IDX=480
-        RESTR_ORIGIN_LON_IDX=1400
-        RESTR_PATCH_SIZE_LAT=400
-        RESTR_PATCH_SIZE_LON=330
-    elif region_keyword=="Great Lakes":
-        RESTR_ORIGIN_LAT_IDX=810
-        RESTR_ORIGIN_LON_IDX=1150
-        RESTR_PATCH_SIZE_LAT=400
-        RESTR_PATCH_SIZE_LON=600
-    elif region_keyword=="Northeast":
-        RESTR_ORIGIN_LAT_IDX=770
-        RESTR_ORIGIN_LON_IDX=1580
-        RESTR_PATCH_SIZE_LAT=450
-        RESTR_PATCH_SIZE_LON=450
-
-    #Should add more regions here, namely east/west CONUS, great lakes, Appalachians 
+    if not region_keyword==None:
+        RESTR_ORIGIN_LAT_IDX = C.region_keyword_indices_dict[region_keyword]['RESTR_ORIGIN_LAT_IDX']
+        RESTR_ORIGIN_LON_IDX = C.region_keyword_indices_dict[region_keyword]['RESTR_ORIGIN_LON_IDX']
+        RESTR_PATCH_SIZE_LAT = C.region_keyword_indices_dict[region_keyword]['RESTR_PATCH_SIZE_LAT']
+        RESTR_PATCH_SIZE_LON = C.region_keyword_indices_dict[region_keyword]['RESTR_PATCH_SIZE_LON']
     
     return data[RESTR_ORIGIN_LAT_IDX:RESTR_ORIGIN_LAT_IDX+RESTR_PATCH_SIZE_LAT, RESTR_ORIGIN_LON_IDX:RESTR_ORIGIN_LON_IDX+RESTR_PATCH_SIZE_LON]
