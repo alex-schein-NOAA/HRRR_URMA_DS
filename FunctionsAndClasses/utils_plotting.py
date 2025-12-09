@@ -274,13 +274,14 @@ def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_at
         str_z_or_m = "meridional"
 
     max_grad = np.nanmax(np.abs(grad_diff))/denom
+    grad_rmse = np.sqrt(np.nanmean(grad_diff)**2)
 
     fig = plt.subplots(1,1,figsize=(14,7))
     plt.imshow(grad_diff, origin='lower', cmap='bwr', vmin=-1*max_grad, vmax=max_grad)
     cbar=plt.colorbar(fraction=0.02, pad=0.01)
     cbar.set_label(f"Gradient difference ({C.varname_units_dict[TARG_VAR]} per km)")
     plt.axis("off")
-    plt.title(f"Difference in {str_z_or_m} gradient, model minus target, {TARG_VAR} \n Model = {str_model} | {dt_current}")
+    plt.title(f"Difference in {str_z_or_m} gradient, model minus target, {TARG_VAR} \n Model = {str_model} \n {dt_current} | RMSE = {grad_rmse:.3f}")
 
     return
 
