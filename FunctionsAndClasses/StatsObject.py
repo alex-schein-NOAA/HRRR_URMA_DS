@@ -98,9 +98,9 @@ class StatsObject():
             print(f"Calculating RMSE over CONUS for all times ({self.target_var}, {self.current_model_attrs.savename})")
             print(f"Using NaN fill value = {self.nan_fill_value} (standardized units)")
     
-            xr_smartinit = get_smartinit_output_at_idx(i=0, target_var='t2m') #we only care about the mask
+            xr_smartinit = get_smartinit_output_at_idx(idx=0, target_var='t2m') #we only care about the mask
             smartinit_data = xr_smartinit.data #need it in memory for speed reasons
-            for i in range(len(self.current_model_attrs.dataset.xr_datasets_targ[0])):
+            for i in range(len(self.current_model_attrs.dataset.xr_datasets_target[0])):
                 predictor, model_output, target, _ = get_model_output_at_idx(self.current_model_attrs, 
                                                                              self.current_model_attrs.model, 
                                                                              predictor_var=self.predictor_var, 
@@ -109,13 +109,13 @@ class StatsObject():
                                                                              is_nan=True, 
                                                                              nan_fill_value=self.nan_fill_value)
                 self.domain_avg_rmse_alltimes_list.append(self.calc_domain_avg_RMSE_masked_onetime(predictor, smartinit_data, targ, model_output))
-                if i%int(len(self.current_model_attrs.dataset.xr_datasets_targ[0])/100)==0:
-                    print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_targ[0]))*100:.0f}% done")
+                if i%int(len(self.current_model_attrs.dataset.xr_datasets_target[0])/100)==0:
+                    print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_target[0]))*100:.0f}% done")
         else:
             print(f"Calculating RMSE over {self.region_keyword} for all times ({self.target_var}, {self.current_model_attrs.savename})")
-            xr_smartinit = get_smartinit_output_at_idx(i=0, target_var='t2m') #we only care about the mask
+            xr_smartinit = get_smartinit_output_at_idx(idx=0, target_var='t2m') #we only care about the mask
             smartinit_data = xr_smartinit.data #need it in memory for speed reasons
-            for i in range(len(self.current_model_attrs.dataset.xr_datasets_targ[0])):
+            for i in range(len(self.current_model_attrs.dataset.xr_datasets_target[0])):
                 predictor, model_output, target, _ = get_model_output_at_idx(self.current_model_attrs, 
                                                                              self.current_model_attrs.model, 
                                                                              predictor_var=self.predictor_var, 
@@ -127,8 +127,8 @@ class StatsObject():
                 mo_r = restrict_to_region(model_output_cropped, region_keyword=self.region_keyword)
                 t_r = restrict_to_region(target_cropped, region_keyword=self.region_keyword)
                 self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((mo_r-t_r)**2)))
-                if i%int(len(self.current_model_attrs.dataset.xr_datasets_targ[0])/100)==0:
-                    print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_targ[0]))*100:.0f}% done")
+                if i%int(len(self.current_model_attrs.dataset.xr_datasets_target[0])/100)==0:
+                    print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_target[0]))*100:.0f}% done")
         return
 
     #########################################
