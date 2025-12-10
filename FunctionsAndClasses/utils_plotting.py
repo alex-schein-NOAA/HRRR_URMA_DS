@@ -265,12 +265,14 @@ def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_at
         str_model="Smartinit" 
     else: 
         str_model=model_attrs.savename
+
+    grad_diff = calc_gradient_difference(input_cropped, target_cropped, is_zonal)
     
     if is_zonal:
-        grad_diff = np.gradient(input_cropped, 2.5)[1] - np.gradient(target_cropped, 2.5)[1]
+        # grad_diff = np.gradient(input_cropped, 2.5)[1] - np.gradient(target_cropped, 2.5)[1]
         str_z_or_m = "zonal"
     else:
-        grad_diff = np.gradient(input_cropped, 2.5)[0] - np.gradient(target_cropped, 2.5)[0]
+        # grad_diff = np.gradient(input_cropped, 2.5)[0] - np.gradient(target_cropped, 2.5)[0]
         str_z_or_m = "meridional"
 
     max_grad = np.nanmax(np.abs(grad_diff))/denom
