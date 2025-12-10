@@ -44,11 +44,18 @@ def get_model_output_at_idx(model_attrs,
     if is_nan: 
         np.nan_to_num(predictor, copy=False, nan=nan_fill_value) 
     predictor = predictor[np.newaxis,:] 
-    predctor_gpu = torch.from_numpy(predictor).cuda(device)
+    predictor_gpu = torch.from_numpy(predictor).cuda(device)
     
+    # with torch.no_grad():
+    #     model_output = model(predictor_gpu.float())
+    #     model_output = model_output.cpu().numpy()
+
+    #Experimental, to free up GPU memory
     with torch.no_grad():
-        model_output = model(predctor_gpu.float())
-        model_output = model_output.cpu().numpy()
+        model_output_gpu = model(predictor_gpu.float())
+        model_output = model_output_gpu.cpu().numpy()
+    del predictor_gpu, model_output_gpu
+    torch.cuda.empty_cache()
     
     date = model_attrs.dataset.xr_datasets_predictor[model_attrs.predictor_vars.index(predictor_var)][idx].valid_time.data
     dt_current = dt.datetime.strptime(str(np.datetime_as_string(date, unit='m')), "%Y-%m-%dT%H:%M")
