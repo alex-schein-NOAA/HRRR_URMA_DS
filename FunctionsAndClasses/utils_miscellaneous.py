@@ -38,3 +38,21 @@ def read_epoch_num_and_loss(TRAINING_LOG_FILEPATH):
                     epoch_loss_arr.append(epoch_loss)
 
     return epoch_number_arr, epoch_loss_arr
+
+########################################################
+
+def calc_gradient_difference(input_arr, target_arr, is_zonal):
+    """ 
+    Calculates the difference in the gradients of input_arr (can be model output or smartinit) and target_arr (i.e. URMA). 
+    Arrays should be spatially subset to the region of interest before being fed into this function.
+    NOTE: uses grid spacing = 2.5, which is hardcoded! All data here is on a 2.5km grid so this should be fine, though
+
+    Inputs:
+        - input_arr --> already-restricted array of input data (i.e. model output or Smartinit)
+        - target_arr --> already-restricted array of target data (i.e. URMA)
+        - is_zonal --> bool; if true, the zonal (x) gradient difference is returned, and if False then the meridional (y) gradient difference is returned
+    """
+    if is_zonal:
+        return (np.gradient(input_arr, 2.5)[1] - np.gradient(target_arr, 2.5)[1])
+    else:
+        return (np.gradient(input_arr, 2.5)[0] - np.gradient(target_arr, 2.5)[0])
