@@ -40,6 +40,8 @@ class StatsObject():
         self.is_smartinit = is_smartinit
         self.is_conus = is_conus
         self.region_keyword = region_keyword
+        if self.region_keyword is not None:
+            self.region_keyword_abbreviation = self.C.region_keyword_dict[self.region_keyword]['abbreviation']
         self.current_model_attrs = current_model_attrs
         self.predictor_var = predictor_var if current_model_attrs==None else current_model_attrs.predictor_vars[0] 
         self.target_var = target_var
@@ -165,7 +167,27 @@ class StatsObject():
                     csv_writer.writerow(self.domain_avg_rmse_alltimes_list)
                 print(f"{self.target_var} csv written to disk")
         else:
-            print(f"Regional RMSE not yet implemented")
+            if os.path.exists(f"{self.C.DIR_UNET_MAIN}/Smartinit_stats/smartinit_RMSE_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.csv"): 
+                print(f"{self.target_var} RMSE data for Smartinit exists on disk ({self.region_keyword})")
+                with open(f"{self.C.DIR_UNET_MAIN}/Smartinit_stats/smartinit_RMSE_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.csv", 'r', newline='') as file:
+                    reader = csv.reader(file)
+                    self.domain_avg_rmse_alltimes_list = [np.float32(x) for x in (list(reader))[0]]
+                print(f"{self.target_var} RMSE data has been read in")        
+            else:
+                print(f"{self.target_var} RMSE data for Smartinit ({self.region_keyword}) does not exist on disk. Calculating now...")
+                xr_urma = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_urma_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
+                xr_hrrr = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
+                hrrr_arr = xr_hrrr[0].data #need this in memory as a static mask
+                for i, urma_arr in enumerate(xr_urma):
+                    xr_smartinit = get_smartinit_output_at_idx(idx=i, target_var=self.target_var)
+                    self.domain_avg_rmse_alltimes_list.append(self.calc_domain_avg_RMSE_onetime(hrrr_arr, xr_smartinit.data, urma_arr))
+                    if i%int(len(xr_urma)/100)==0:
+                        print(f"{(i/len(xr_urma))*100:.0f}% done")
+                # Write completed data so this doesn't have to be done again
+                with open(f"{self.C.DIR_UNET_MAIN}/Smartinit_stats/smartinit_RMSE_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.csv", "w", newline='') as file:
+                    csv_writer = csv.writer(file)
+                    csv_writer.writerow(self.domain_avg_rmse_alltimes_list)
+                print(f"{self.target_var} csv written to disk")
         
         return
 
@@ -190,3 +212,5 @@ class StatsObject():
             diff_arr = model_output_arr - urma_arr
    
         return np.sqrt(np.nanmean(diff_arr**2))
+
+    #########################################
