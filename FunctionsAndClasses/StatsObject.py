@@ -6,7 +6,7 @@ from FunctionsAndClasses.HEADER_torch import *
 from FunctionsAndClasses.DefineModelAttributes import *
 from FunctionsAndClasses.HRRR_URMA_Dataset import * #might not be needed
 
-from utils_miscellaneous import *
+from FunctionsAndClasses.utils_miscellaneous import *
 
 ######################################################################################################################################################
 
@@ -150,11 +150,11 @@ class StatsObject():
             else:
                 print(f"{self.target_var} RMSE data for Smartinit (CONUS) does not exist on disk. Calculating now...")
                 xr_urma = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_urma_alltimes_CONUS_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
-                xr_hrrr = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_CONUS_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
+                xr_hrrr = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_CONUS_{self.target_var}_f01.grib2", decode_timedelta=True, engine='cfgrib')
                 hrrr_arr = xr_hrrr[0].data #need this in memory as a static mask
                 for i, urma_arr in enumerate(xr_urma):
                     xr_smartinit = get_smartinit_output_at_idx(idx=i, target_var=self.target_var)
-                     _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(hrrr_arr, xr_smartinit.data, xr_smartinit.data, urma_arr)
+                    _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(hrrr_arr, xr_smartinit.data, xr_smartinit.data, urma_arr)
                     self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((smartinit_cropped - target_cropped)**2)))
                     if i%int(len(xr_urma)/100)==0:
                         print(f"{(i/len(xr_urma))*100:.0f}% done")
@@ -172,12 +172,12 @@ class StatsObject():
                 print(f"{self.target_var} RMSE data has been read in")        
             else:
                 print(f"{self.target_var} RMSE data for Smartinit ({self.region_keyword}) does not exist on disk. Calculating now...")
-                xr_urma = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_urma_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
-                xr_hrrr = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_{self.region_keyword_abbreviation}_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
+                xr_urma = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_urma_alltimes_CONUS_{self.target_var}.grib2", decode_timedelta=True, engine='cfgrib')
+                xr_hrrr = xr.open_dataarray(f"{self.C.DIR_TRAIN_TEST}/test_hrrr_alltimes_CONUS_{self.target_var}_f01.grib2", decode_timedelta=True, engine='cfgrib')
                 hrrr_arr = xr_hrrr[0].data #need this in memory as a static mask
                 for i, urma_arr in enumerate(xr_urma):
                     xr_smartinit = get_smartinit_output_at_idx(idx=i, target_var=self.target_var)
-                    _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(predictor, xr_smartinit.data, xr_smartinit.data, target)
+                    _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(hrrr_arr, xr_smartinit.data, xr_smartinit.data, urma_arr)
                     sm_r = restrict_to_region(smartinit_cropped, region_keyword=self.region_keyword)
                     t_r = restrict_to_region(target_cropped, region_keyword=self.region_keyword)
                     self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((sm_r-t_r)**2)))
