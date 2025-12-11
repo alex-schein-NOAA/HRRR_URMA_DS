@@ -217,7 +217,9 @@ class StatsObject():
 
     #########################################
 
-    def calc_domain_avg_gradient_RMSE_onetime(self, is_zonal):
+    def calc_domain_avg_gradient_RMSE_alltimes(self, is_zonal):
         """
-        Inputs: 
+        TO DO:
+            - Decide on the scope of this function
+            - Decide on the structure; should it be split up into model and Smartinit separately, like the RMSE calculations?
         """
