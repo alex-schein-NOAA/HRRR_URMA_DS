@@ -6,6 +6,8 @@ from FunctionsAndClasses.HEADER_torch import *
 from FunctionsAndClasses.DefineModelAttributes import *
 from FunctionsAndClasses.HRRR_URMA_Dataset import * #might not be needed
 
+from utils_miscellaneous import *
+
 ######################################################################################################################################################
 
 class StatsObject():
@@ -59,9 +61,6 @@ class StatsObject():
     def calc_domain_avg_RMSE_alltimes(self):
         """ 
         Wrapper function for RMSE calculations for HRRR and Smartinit. 
-
-        TO DO (2025-12-03):
-            - make an optional argument to restrict the domain - this function might be needed to calc RMSE over subregions like Colorado. Can use restrict_to_region
         """
 
         if self.domain_avg_rmse_alltimes_list is None: #Only compute if not already done
@@ -81,13 +80,11 @@ class StatsObject():
     def calc_model_domain_avg_RMSE_alltimes(self):
         """
         Calculates domain average RMSE for the given model (in the input model_attrs).
-        If is_conus==True, calculates over CONUS, using ONLY the overlapping region between Smartinit and the model output domains.
-        If is_conus==False, uses self.region_keyword to restrict to that subdomain 
+        If self.is_conus==True, calculates over CONUS, using ONLY the overlapping region between Smartinit and the model output domains.
+        If self.is_conus==False, uses self.region_keyword to restrict to that subdomain 
 
         Uses self.nan_fill_value (default=0), so if this should be another value, change that before calling this function.
 
-        TO DO (2025-12-03):
-            - make an optional argument to restrict the domain - this function might be needed to calc RMSE over subregions like Colorado. Can use restrict_to_region
         """
 
         if self.current_model_attrs.dataset is None:
@@ -110,7 +107,8 @@ class StatsObject():
                                                                              idx=i, 
                                                                              is_nan=True, 
                                                                              nan_fill_value=self.nan_fill_value)
-                self.domain_avg_rmse_alltimes_list.append(self.calc_domain_avg_RMSE_masked_onetime(predictor, smartinit_data, targ, model_output))
+                _, model_output_cropped, _, target_cropped = crop_to_intersection_of_inputs(predictor, model_output, smartinit_data, target)
+                self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((model_output_cropped - target_cropped)**2)))
                 if i%int(len(self.current_model_attrs.dataset.xr_datasets_target[0])/100)==0:
                     print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_target[0]))*100:.0f}% done")
         else:
@@ -138,11 +136,9 @@ class StatsObject():
     def calc_smartinit_domain_avg_RMSE_alltimes(self):
         """
         Calculates domain average RMSE for Smartinit.
-        Currently (as of 2025/12/03) this is only set up to calculate over the CONUS domain.
-        Uses only the overlapping region between Smartinit and the HRRR domains!
+        If self.is_conus==True, calculates over CONUS, using ONLY the overlapping region between Smartinit and the model output domains.
+        If self.is_conus==False, uses self.region_keyword to restrict to that subdomain 
 
-        TO DO (2025-12-03):
-            - make an optional argument to restrict the domain - this function might be needed to calc RMSE over subregions like Colorado. Can use restrict_to_region
         """
         if self.is_conus:
             if os.path.exists(f"{self.C.DIR_UNET_MAIN}/Smartinit_stats/smartinit_RMSE_alltimes_CONUS_{self.target_var}.csv"): #CONUS data should already exist on disk
@@ -158,7 +154,8 @@ class StatsObject():
                 hrrr_arr = xr_hrrr[0].data #need this in memory as a static mask
                 for i, urma_arr in enumerate(xr_urma):
                     xr_smartinit = get_smartinit_output_at_idx(idx=i, target_var=self.target_var)
-                    self.domain_avg_rmse_alltimes_list.append(self.calc_domain_avg_RMSE_onetime(hrrr_arr, xr_smartinit.data, urma_arr))
+                     _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(hrrr_arr, xr_smartinit.data, xr_smartinit.data, urma_arr)
+                    self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((smartinit_cropped - target_cropped)**2)))
                     if i%int(len(xr_urma)/100)==0:
                         print(f"{(i/len(xr_urma))*100:.0f}% done")
                 # Write completed data so this doesn't have to be done again
@@ -180,7 +177,10 @@ class StatsObject():
                 hrrr_arr = xr_hrrr[0].data #need this in memory as a static mask
                 for i, urma_arr in enumerate(xr_urma):
                     xr_smartinit = get_smartinit_output_at_idx(idx=i, target_var=self.target_var)
-                    self.domain_avg_rmse_alltimes_list.append(self.calc_domain_avg_RMSE_onetime(hrrr_arr, xr_smartinit.data, urma_arr))
+                    _, _, smartinit_cropped, target_cropped = crop_to_intersection_of_inputs(predictor, xr_smartinit.data, xr_smartinit.data, target)
+                    sm_r = restrict_to_region(smartinit_cropped, region_keyword=self.region_keyword)
+                    t_r = restrict_to_region(target_cropped, region_keyword=self.region_keyword)
+                    self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((sm_r-t_r)**2)))
                     if i%int(len(xr_urma)/100)==0:
                         print(f"{(i/len(xr_urma))*100:.0f}% done")
                 # Write completed data so this doesn't have to be done again
@@ -193,24 +193,31 @@ class StatsObject():
 
     #########################################
     
-    def calc_domain_avg_RMSE_onetime(self, hrrr_arr, smartinit_arr, urma_arr, model_output_arr=None):
-        """
-        Inputs: (NOTE ALL ARRAYS SHOULD BE ON THE FULL WEXP GRID! NO CROPPING INITIALLY!)
-            - hrrr_arr --> HRRR data with NaNs included. Only used for masking, so this can be static. 
-            - smartinit_arr --> Smartinit data with NaNs included. Can be static if doing RMSE for model output (only need the Smartinit mask), or @ idx if doing Smartinit calculation
-            - urma_arr --> URMA data. Should always be @ idx
-            - model_output_arr --> model output @ idx. Not needed if doing Smartinit
+    # def calc_domain_avg_RMSE_onetime(self, hrrr_arr, smartinit_arr, urma_arr, model_output_arr=None):
+    #     """
+    #     Inputs: (NOTE ALL ARRAYS SHOULD BE ON THE FULL WEXP GRID! NO CROPPING INITIALLY!)
+    #         - hrrr_arr --> HRRR data with NaNs included. Only used for masking, so this can be static. 
+    #         - smartinit_arr --> Smartinit data with NaNs included. Can be static if doing RMSE for model output (only need the Smartinit mask), or @ idx if doing Smartinit calculation
+    #         - urma_arr --> URMA data. Should always be @ idx
+    #         - model_output_arr --> model output @ idx. Not needed if doing Smartinit
 
-        Masks data (either Smartinit or HRRR, depending on if self.is_smartinit=True/False respectively) to the intersection of Smartinit/HRRR regions, then returns the domain average RMSE (float), as compared to urma_arr.
-        """
+    #     Masks data (either Smartinit or HRRR, depending on if self.is_smartinit=True/False respectively) to the intersection of Smartinit/HRRR regions, then returns the domain average RMSE (float), as compared to urma_arr.
+
+    #     !! (AS OF 2025/12/10) Only works on CONUS - currently the domain avg RMSE alltimes functions do their own cropping and subsetting and RMSE calc. This should probably be changed in the future but works for now
+    #     """
         
-        if self.is_smartinit:
-            _, _, smartinit_arr, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, smartinit_arr, smartinit_arr, target=urma_arr)
-            diff_arr = smartinit_arr - urma_arr
-        else:
-            _, model_output_arr, _, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, model_output_arr, smartinit_arr, target=urma_arr)
-            diff_arr = model_output_arr - urma_arr
+    #     if self.is_smartinit:
+    #         _, _, smartinit_arr, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, smartinit_arr, smartinit_arr, target=urma_arr)
+    #         diff_arr = smartinit_arr - urma_arr
+    #     else:
+    #         _, model_output_arr, _, urma_arr = crop_to_intersection_of_inputs(hrrr_arr, model_output_arr, smartinit_arr, target=urma_arr)
+    #         diff_arr = model_output_arr - urma_arr
    
-        return np.sqrt(np.nanmean(diff_arr**2))
+    #     return np.sqrt(np.nanmean(diff_arr**2))
 
     #########################################
+
+    def calc_domain_avg_gradient_RMSE_onetime(self, is_zonal):
+        """
+        Inputs: 
+        """
