@@ -111,6 +111,7 @@ class StatsObject():
                 self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((model_output_cropped - target_cropped)**2)))
                 if i%int(len(self.current_model_attrs.dataset.xr_datasets_target[0])/100)==0:
                     print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_target[0]))*100:.0f}% done")
+            print(f"Done with model RMSE over CONUS")
         else:
             print(f"Calculating RMSE over {self.region_keyword} for all times ({self.target_var}, {self.current_model_attrs.savename})")
             xr_smartinit = get_smartinit_output_at_idx(idx=0, target_var='t2m') #we only care about the mask
@@ -129,6 +130,7 @@ class StatsObject():
                 self.domain_avg_rmse_alltimes_list.append(np.sqrt(np.nanmean((mo_r-t_r)**2)))
                 if i%int(len(self.current_model_attrs.dataset.xr_datasets_target[0])/100)==0:
                     print(f"{(i/len(self.current_model_attrs.dataset.xr_datasets_target[0]))*100:.0f}% done")
+            print(f"Done with model RMSE over {self.region_keyword}")
         return
 
     #########################################
