@@ -29,7 +29,7 @@ class StatsObject():
             - is_conus --> bool, True is desiring stats over the CONUS region. If False, stats will be calculated with respect to the region defined by region_keyword (see CONSTANTS for boundary indices).
                 > !!!! WILL ONLY CALCULATE STATS IN THE REGION OF OVERLAP BETWEEN SMARTINIT AND HRRR !!!! This is NOT the entire HRRR domain !!
             - region_keyword --> str (or None) defining the region to work over, if is_conus==False. See CONSTANTS.region_keyword_dict for valid keywords/regions
-            - current_model_attrs --> an instance of the DefineModelAttributes class. Doesn't need to have .model set already, as this class should take care of that
+            - current_model_attrs --> an instance of the DefineModelAttributes class. Doesn't need to have .model set already, as this class should take care of that. Not needed for Smartinit
             - predictor_var --> string of the predictor var (e.g. 't2m'). Only used for get_model_output_at_idx call; needs to match at least one of the predictor variables in self.current_model_attrs.predictor_vars, but is otherwise not important, and is not used for Smartinit
             - target_var --> string (just one, not a list of multiple!) of the desired target variable whose quantities will be computed
                 - Valid options: "pressurf", "t2m", "d2m", "spfh2m", "u10m", "v10m"
