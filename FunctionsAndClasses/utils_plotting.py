@@ -333,11 +333,17 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
     
     plt.ylabel(f"RMSE improvement ({units_str})")
     plt.xlabel("Date")
-    plt.title(f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n \
-                Model = {model_attrs.savename}", fontsize=9)
+
+    title_str = f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
+    if statsobj_model.region_keyword is not None:
+        title_str = f"{statsobj_model.target_var} domain-average RMSE difference, {statsobj_model.region_keyword}, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
+    
+    plt.title(title_str, fontsize=9)
 
     if save_fig:
         fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
+        if statsobj_model.region_keyword is not None:
+            fig_savename = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
         plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
         print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
         
@@ -401,6 +407,8 @@ def plot_model_vs_model_RMSE(model_1_attrs,
 
     if save_fig:
         fig_savename = f"RMSE_{TARG_VAR}_model1({model_1_attrs.savename})_model2({model_2_attrs.savename})"
+        if statsobj_model_1.region_keyword is not None:
+            fig_savename = f"RMSE_{C.region_keyword_dict[statsobj_model_1.region_keyword]['abbreviation']}_{TARG_VAR}_model1({model_1_attrs.savename})_model2({model_2_attrs.savename})"
         plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
         print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
         
