@@ -291,20 +291,35 @@ def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_at
 
 def plot_model_vs_smartinit_RMSE(model_attrs, 
                                  statsobj_model, 
-                                 statsobj_smartinit, 
+                                 statsobj_smartinit,
+                                 is_gradient=False,
+                                 is_fourier=False,
+                                 title_str=None,
                                  units_str="UNITS", 
                                  save_fig=False, 
-                                 PLOT_SAVE_DIR=os.getcwd()
+                                 save_dir=os.getcwd(),
+                                 save_name=None
                                 ):
     """
     Inputs: 
         - model_attrs --> instance of DefineModelAttributes class for the current model
         - statsobj_model --> instance of StatObjectConstructor for the current model, with .calc_domain_avg_RMSE_alltimes() already done
         - statsobj_smartinit --> same but for Smartinit
+        - is_gradient --> bool to determine if plotting gradient RMSE difference and adjust title and labels accordingly. Mutually exclusive to is_fourier
+        - is_fourier --> same but for Fourier RMSE. Mutually exclusive to is_gradient
+        - title_str --> if is_gradient or is_fourier NOT None, then this MUST be included. Format similarly to the default title, but with additional clarification as to the type of RMSE
         - units_str --> string for the current variable's units (usually is f"{C.varname_units_dict[TARG_VAR]}")
         - save_fig --> bool to save fig or not
-        - PLOT_SAVE_DIR --> full directory path of where to save plots if save_fig=True. Default = current working directory
+        - save_dir --> full directory path of where to save plots if save_fig=True. Default = current working directory
+        - save_name --> string of full model savename, NOT including .png. If None, defaults to regular RMSE; should be changed if doing is_gradient or is_fourier
     """
+    
+    if is_gradient:
+        plt_color = "#FA9302" #Orange
+    elif is_fourier:
+        plt_color = "#00DBC5" #Teal
+    else:
+        plt_color = 'g' #default green for regular domain-average RMSE
     
     rmse_diff = np.array(statsobj_smartinit.domain_avg_rmse_alltimes_list) - np.array(statsobj_model.domain_avg_rmse_alltimes_list)
 
@@ -312,10 +327,10 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
 
     fig, axes = plt.subplots(figsize=(14,7))
     plt.plot(model_attrs.dataset_date_list, rmse_diff, 
-             ".", linestyle='None', markersize=0.5, color='g', alpha=0.5, label="RMSE diff.")
+             ".", linestyle='None', markersize=0.5, color=plt_color, alpha=0.5, label="RMSE diff.")
     
     plt.plot(model_attrs.dataset_date_list[window_len-1:], rolling_avg(rmse_diff, window_len), 
-             linewidth=1, color="g", label=f"RMSE diff., rolling {window_len}-hr mean")
+             linewidth=1, color=plt_color, label=f"RMSE diff., rolling {window_len}-hr mean")
     
     plt.hlines(np.mean(rmse_diff), xmin=model_attrs.dataset_date_list[0], xmax=model_attrs.dataset_date_list[-1], 
                color="r", linewidth=2, label=f"RMSE diff. 2024 mean ({np.mean(rmse_diff):.3f})")
@@ -324,7 +339,6 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
     
     plt.xlim([model_attrs.dataset_date_list[0], model_attrs.dataset_date_list[-1]])
 
-    
     axes.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
     for label in axes.get_xticklabels(which='major'):
         label.set(rotation=30, horizontalalignment='right')
@@ -334,20 +348,23 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
     plt.ylabel(f"RMSE improvement ({units_str})")
     plt.xlabel("Date")
 
-    title_str = f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
-    if statsobj_model.region_keyword is not None:
-        title_str = f"{statsobj_model.target_var} domain-average RMSE difference, {statsobj_model.region_keyword}, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
+    if title_str is None:
+        title_str = f"{statsobj_smartinit.target_var} domain-average RMSE difference, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
+        if statsobj_model.region_keyword is not None:
+            title_str = f"{statsobj_model.target_var} domain-average RMSE difference, {statsobj_model.region_keyword}, Smartinit minus Model, 2024 \n Model = {model_attrs.savename}"
     
     plt.title(title_str, fontsize=9)
 
     if save_fig:
-        fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
-        if statsobj_model.region_keyword is not None:
-            fig_savename = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
-        plt.savefig(f"{PLOT_SAVE_DIR}/{fig_savename}.png",dpi=300, bbox_inches="tight")
-        print(f"{fig_savename} saved to {PLOT_SAVE_DIR}")
+        if save_name is None:
+            fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
+            if statsobj_model.region_keyword is not None:
+                fig_savename = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
         
-    plt.show()
+        plt.savefig(f"{save_dir}/{fig_savename}.png", dpi=300, bbox_inches="tight")
+        print(f"{fig_savename} saved to {save_dir}")
+        
+    # plt.show() #2025/12/20 - TEMPORARILY commented out to run loop script
 
     return
 

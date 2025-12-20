@@ -59,7 +59,7 @@ def calc_gradient_difference(input_arr, target_arr, is_zonal):
 
 ########################################################
 
-def calc_RMSE(input_arr, target_arr=None)
+def calc_RMSE(input_arr, target_arr=None):
     """
     Simple overloaded function to calculate RMSE from either one or two inputs. If only input_arr is given (i.e. an array of differences) then just returns np.sqrt(np.nanmean(input_arr**2)). If target_arr is also given then it calculates np.sqrt(np.nanmean((input_arr - target_arr)**2))
     """
