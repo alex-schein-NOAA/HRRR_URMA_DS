@@ -19,6 +19,18 @@ class CONSTANTS():
         
         """
         
+        ## Common directories 
+        self.DIR_TRAIN_TEST = f"/scratch3/BMC/wrfruc/aschein/Train_Test_Files"
+        self.DIR_UNET_MAIN = f"/scratch3/BMC/wrfruc/aschein/UNet_final" #Should be os.getcwd()
+        self.DIR_TRAINED_MODELS = f"{self.DIR_UNET_MAIN}/Trained_models" #f"/scratch3/BMC/wrfruc/aschein/UNet_final/Trained_models"
+        self.DIR_SMARTINIT_DATA = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files" #regridded Smartinit
+        self.DIR_SMARTINIT_DATA_NDFD_GRID = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files_NDFDgrid" #old Smartinit on native grid
+
+        ## Indexes for selection of patches for training
+        self.PATCH_SIZE=400
+        
+
+        ## Dictionaries 
         self.varname_translation_dict = {"pressurf":"sp",
                                          "t2m":"t2m",
                                          "d2m":"d2m",
@@ -94,16 +106,6 @@ class CONSTANTS():
                                           'u10m':3.14104, 
                                           'v10m':3.71392} }
         
-
-        ## Common directories 
-        self.DIR_TRAIN_TEST = f"/scratch3/BMC/wrfruc/aschein/Train_Test_Files"
-        self.DIR_UNET_MAIN = f"/scratch3/BMC/wrfruc/aschein/UNet_final" #Should be os.getcwd()
-        self.DIR_TRAINED_MODELS = f"{self.DIR_UNET_MAIN}/Trained_models" #f"/scratch3/BMC/wrfruc/aschein/UNet_final/Trained_models"
-        self.DIR_SMARTINIT_DATA = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files" #regridded Smartinit
-        self.DIR_SMARTINIT_DATA_NDFD_GRID = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files_NDFDgrid" #old Smartinit on native grid
-
-        ## Indexes for selection of patches for training
-        self.PATCH_SIZE=400
 
         ## Region indices (relative to data that has already been restricted to the intersection of HRRR and Smartinit regions) and other data
         self.region_keyword_dict = {"Colorado":{'RESTR_ORIGIN_LAT_IDX':630,
