@@ -67,3 +67,16 @@ def calc_RMSE(input_arr, target_arr=None):
         return np.sqrt(np.nanmean(input_arr**2))
     else:
         return np.sqrt(np.nanmean((input_arr-target_arr)**2))
+
+########################################################
+
+def calc_fourier_RMSE(input_arr, target_arr):
+    """ 
+    Function to calculate Fourier RMSE between 2 arrays. Note that the resulting RMSE is taken between absolutes, that is, the power spectrum of both input_arr and target_arr are taken, then their difference is taken, rather than taking the difference beforehand (i.e. involving the complex part).
+    Inputs should be 2D arrays, already spatially retricted to the region of interest.
+    """
+
+    ps_input = np.absolute(np.fft.fft2(input_arr))
+    ps_target = np.absolute(np.fft.fft2(target_arr))
+
+    return calc_RMSE(ps_input, ps_target)
