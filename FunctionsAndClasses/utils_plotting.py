@@ -17,7 +17,7 @@ def plot_predictor_output_truth_error(predictor,
                                       model_output, 
                                       target, 
                                       date_str="DATE", 
-                                      title="MODEL_NAME", 
+                                      title_str="MODEL_NAME", 
                                       save_fig=False, 
                                       save_dir=os.getcwd(), 
                                       fig_savename="temp.png", 
@@ -33,7 +33,7 @@ def plot_predictor_output_truth_error(predictor,
         - model_output --> array of model output, or whatever else (e.g. Smartinit field)
         - target --> array of "truth" data (i.e. URMA for our purposes)
         - date_str --> string or datetime object of format dt.datetime.strptime(str(np.datetime_as_string(date, unit='s')), "%Y-%m-%dT%H:%M:%S") 
-        - title --> model name/params/whatever to identify that plot
+        - title_str --> model name/params/whatever to identify that plot
         - save_fig --> bool; if True, saves to save_dir 
         - save_dir --> string or filepath to master save directory. Default = current working directory
         - fig_savename --> string for file savename, if save_fig = True. Should include ".png"
@@ -64,7 +64,7 @@ def plot_predictor_output_truth_error(predictor,
     cbar = fig.colorbar(pos, ax=axes[3], fraction=0.03) 
     cbar.set_label(f'Error ({units_str})')
     
-    plt.suptitle(f"{title} | Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
+    plt.suptitle(f"{title_str} | Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
     plt.tight_layout()
 
     if save_fig:
@@ -84,7 +84,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
                                             use_hrrr_mask=True,
                                             use_smartinit_mask=False,
                                             date_str="DATE",
-                                            title="MODEL NAME",
+                                            title_str="MODEL NAME",
                                             units_str="",
                                             save_fig=False, 
                                             save_dir=f"/scratch3/BMC/wrfruc/aschein/UNet_main", 
@@ -113,7 +113,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
             > For Smartinit, it should pretty much always be True, if the goal is to compare Smartinit against HRRRR
         - use_smartinit_mask --> " " for regridded Smartinit data. Doesn't always need to be True, but should be if comparing HRRR against Smartinit
         - date_str --> string of format dt.datetime.strptime(str(np.datetime_as_string(date, unit='s')), "%Y-%m-%dT%H:%M:%S") from get_model_output()
-        - title --> model name/params/whatever to identify that plot
+        - title_str --> model name/params/whatever to identify that plot
         - save_fig --> bool for saving; if True, saves to directory this script is called from (currently this function is not intended for formalized plot saving)
         - save_dir --> master save directory
         - fig_savename --> string for file savename, if to_save = True. Should include ".png" at the end
@@ -169,7 +169,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
                 cbar.set_label(f'{units_str_new}')
 
             ax.axis("off")
-        plt.suptitle(f"{title} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
+        plt.suptitle(f"{title_str} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
                 
         #Always make the last plot the error
         pos = axes[-1].imshow((model_output.squeeze() - target.squeeze()), cmap='bwr', origin='lower', vmin=-1*avg, vmax=avg)
@@ -185,7 +185,7 @@ def plot_predictor_output_truth_error_CONUS(predictor,
         axes.axis("off")
         cbar = fig.colorbar(pos, ax=axes, fraction=0.021, pad=0.01)
         cbar.set_label(f'Error ({units_str})')
-        plt.title(f"{title} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f} \n Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})", 
+        plt.title(f"{title_str} \n Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f} \n Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})", 
                   va="bottom", fontsize=14) #suptitle also looks bad
     
     plt.tight_layout()
