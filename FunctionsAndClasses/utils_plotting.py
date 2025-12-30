@@ -379,8 +379,11 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
             if statsobj_model.region_keyword is not None:
                 save_name = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
         
-        plt.savefig(f"{save_dir}/{save_name}.png", dpi=300, bbox_inches="tight")
-        print(f"{save_name} saved to {save_dir}")
+        if not os.exists(f"{save_dir}/{save_name}.png"):
+            plt.savefig(f"{save_dir}/{save_name}.png", dpi=300, bbox_inches="tight")
+            print(f"{save_name} saved to {save_dir}")
+        else:
+            print(f"{save_name} already exists in {save_dir}. Delete the figure and rerun this function if a new plot is desired")
         
     # plt.show() #2025/12/20 - TEMPORARILY commented out to run loop script
 
