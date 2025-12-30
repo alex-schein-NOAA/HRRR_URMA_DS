@@ -17,7 +17,8 @@ def plot_predictor_output_truth_error(predictor,
                                       model_output, 
                                       target, 
                                       date_str="DATE", 
-                                      title_str="MODEL_NAME", 
+                                      title_str="MODEL_NAME",
+                                      region_keyword=None,
                                       save_fig=False, 
                                       save_dir=os.getcwd(), 
                                       fig_savename="temp.png", 
@@ -34,6 +35,7 @@ def plot_predictor_output_truth_error(predictor,
         - target --> array of "truth" data (i.e. URMA for our purposes)
         - date_str --> string or datetime object of format dt.datetime.strptime(str(np.datetime_as_string(date, unit='s')), "%Y-%m-%dT%H:%M:%S") 
         - title_str --> model name/params/whatever to identify that plot
+        - region_keyword --> string of the region being plotted, for plot formatting purposes. Data should have already been restricted to the region before calling this function
         - save_fig --> bool; if True, saves to save_dir 
         - save_dir --> string or filepath to master save directory. Default = current working directory
         - fig_savename --> string for file savename, if save_fig = True. Should include ".png"
@@ -41,8 +43,22 @@ def plot_predictor_output_truth_error(predictor,
         - avg_denom --> how much to scale error plot by. Should be ~10 for temperature/wind vars, but for pressurf, should be ~150
     """
 
+    C = CONSTANTS()
+    
     #predictor, model_output, target = input data, model prediction, truth, respectively, as numpy arrays
     fig, axes = plt.subplots(1,4, figsize=(20,5))
+    cax = fig.add_axes([C.region_keyword_plot_dict[region_keyword]['ppote_cax_0'],
+                        C.region_keyword_plot_dict[region_keyword]['ppote_cax_1'],
+                        C.region_keyword_plot_dict[region_keyword]['ppote_cax_2'],
+                        C.region_keyword_plot_dict[region_keyword]['ppote_cax_3'] ])
+    fig.subplots_adjust(wspace=C.region_keyword_plot_dict[region_keyword]['ppote_subplots_adjust_wspace'])
+
+    # Avoid unit issues with t2m and d2m (hack workaround)
+    if units_str=='deg C':
+        predictor = predictor - 273.15
+        model_output = model_output - 273.15
+        target = target - 273.15
+
     maxtemp = np.nanmax([np.nanmax(predictor.squeeze()), np.nanmax(model_output.squeeze()), np.nanmax(target.squeeze())])
     mintemp = np.nanmin([np.nanmin(predictor.squeeze()), np.nanmin(model_output.squeeze()), np.nanmin(target.squeeze())])
 
@@ -61,11 +77,13 @@ def plot_predictor_output_truth_error(predictor,
     axes[3].set_title(f"Prediction - Truth (RMSE = {np.sqrt(np.nanmean((model_output.squeeze() - target.squeeze())**2)):.3f})")
     axes[3].axis("off")
 
-    cbar = fig.colorbar(pos, ax=axes[3], fraction=0.03) 
+    cbar = fig.colorbar(pos, cax=cax, fraction=C.region_keyword_plot_dict[region_keyword]['ppote_error_cax_fraction'])
     cbar.set_label(f'Error ({units_str})')
     
-    plt.suptitle(f"{title_str} | Date = {date_str} \n Maximum = {maxtemp:.1f} | Minimum = {mintemp:.1f}", va="bottom", fontsize=14)
-    plt.tight_layout()
+    plt.suptitle(f"{title_str} \nDate = {date_str} \nMAX/MIN = {maxtemp:.1f}/{mintemp:.1f} {units_str}", 
+                 va="bottom", 
+                 fontsize=14,
+                 y=C.region_keyword_plot_dict[region_keyword]['ppote_suptitle_y'])
 
     if save_fig:
         plt.savefig(f"{save_dir}/{fig_savename}",dpi=300, bbox_inches="tight")
