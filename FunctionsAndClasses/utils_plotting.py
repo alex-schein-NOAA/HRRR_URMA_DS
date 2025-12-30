@@ -375,12 +375,12 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
 
     if save_fig:
         if save_name is None:
-            fig_savename = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
+            save_name = f"RMSE_{statsobj_smartinit.target_var}_model({model_attrs.savename})"
             if statsobj_model.region_keyword is not None:
-                fig_savename = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
+                save_name = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
         
-        plt.savefig(f"{save_dir}/{fig_savename}.png", dpi=300, bbox_inches="tight")
-        print(f"{fig_savename} saved to {save_dir}")
+        plt.savefig(f"{save_dir}/{save_name}.png", dpi=300, bbox_inches="tight")
+        print(f"{save_name} saved to {save_dir}")
         
     # plt.show() #2025/12/20 - TEMPORARILY commented out to run loop script
 
