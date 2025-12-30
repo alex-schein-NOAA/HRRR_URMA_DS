@@ -221,7 +221,7 @@ class CONSTANTS():
                                                       'ppote_cax_1':0.15,
                                                       'ppote_cax_2':0.01,
                                                       'ppote_cax_3':0.70,
-                                                      'ppote_subplots_adjust_wspace':-0.30,
+                                                      'ppote_subplots_adjust_wspace':-0.32,
                                                       'ppote_error_cax_fraction':0.06,
                                                       'ppote_suptitle_y':0.96},
                                         "Great Lakes":{'fft_spectra_cax_0':0.91,
