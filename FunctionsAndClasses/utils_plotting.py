@@ -307,6 +307,87 @@ def plot_gradient_difference(input_cropped, target_cropped, dt_current, model_at
 
 ########################################################
 
+def plot_power_spectra_and_error(sm_r, mo_r, t_r, dt_current, model_attrs, region_keyword=None, save_fig=False):
+    """
+    Makes 2 plots: (1) 1x3 plot of the power spectra of Smartinit, model output, and target, (2) the Fourier error of Smartinit and model output.
+
+    Inputs:
+        - sm_r --> Smartinit output, already restricted to the region of interest defined by region_keyword
+        - mo_r --> same but for model output
+        - t_r --> same but for URMA
+        - dt_current --> datetime from get_model_output_at_idx, for plotting purposes
+        - model_attrs --> DefineModelAttributes object with .model defined as the model whose output is being used
+        - region_keyword --> string of valid region keyword, as in CONSTANTS
+        - save_fig --> bool to save the figures. As of 2025/12/30, not yet implemented!
+    """
+    
+    fft_smartinit = np.fft.fft2(sm_r)
+    fft_model_output = np.fft.fft2(mo_r)
+    fft_target = np.fft.fft2(t_r)
+    
+    fft_smartinit_abs = np.absolute(fft_smartinit)
+    fft_model_output_abs = np.absolute(fft_model_output)
+    fft_target_abs = np.absolute(fft_target)
+    
+    fft_abs_diff_sm = np.absolute(fft_smartinit_abs - fft_target_abs)
+    fft_abs_diff_mo = np.absolute(fft_model_output_abs - fft_target_abs)
+
+    ## FIGURE 1: 1x3 plot of power spectra
+    fig1, axs1 = plt.subplots(1,3,figsize=(18,6))
+    cax1 = fig1.add_axes([C.region_keyword_plot_dict[region_keyword]['fft_spectra_cax_0'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_spectra_cax_1'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_spectra_cax_2'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_spectra_cax_3'] ])
+    fig1.subplots_adjust(wspace=C.region_keyword_plot_dict[region_keyword]['fft_spectra_subplots_adjust_wspace'])
+    
+    axs1[0].imshow(fft_smartinit_abs, origin='lower', cmap='jet', norm=colors.LogNorm(vmin=fft_smartinit_abs.min(), vmax=fft_smartinit_abs.max()))
+    axs1[0].axis('off')
+    axs1[0].set_title(f"Smartinit")
+    
+    axs1[1].imshow(fft_model_output_abs, origin='lower', cmap='jet', norm=colors.LogNorm(vmin=fft_smartinit_abs.min(), vmax=fft_smartinit_abs.max())) #same color scale
+    axs1[1].axis('off')
+    axs1[1].set_title(f"Model Ouptut")
+    
+    pos = axs1[2].imshow(fft_target_abs, origin='lower', cmap='jet', norm=colors.LogNorm(vmin=fft_smartinit_abs.min(), vmax=fft_smartinit_abs.max())) #same color scale
+    axs1[2].axis('off')
+    axs1[2].set_title(f"Target (URMA)")
+    
+    cbar1 = plt.colorbar(pos, cax=cax1, fraction=C.region_keyword_plot_dict[region_keyword]['fft_spectra_cax_fraction'])
+    cbar1.set_label(f"Wavenumber")
+    
+    fig1.suptitle(f"Power Spectra, {region_keyword}, {dt_current} \nModel = {model_attrs.savename}", fontsize=14, 
+                 y=C.region_keyword_plot_dict[region_keyword]['fft_spectra_suptitle_y'])
+
+    plt.show()
+
+    ## FIGURE 2: 1x2 plot of Smartinit vs Model Fourier error
+    fig2, axs2 = plt.subplots(1,2,figsize=(12,6))
+    cax2 = fig2.add_axes([C.region_keyword_plot_dict[region_keyword]['fft_error_cax_0'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_error_cax_1'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_error_cax_2'],
+                          C.region_keyword_plot_dict[region_keyword]['fft_error_cax_3'] ])
+    fig2.subplots_adjust(wspace=C.region_keyword_plot_dict[region_keyword]['fft_error_subplots_adjust_wspace'])
+    
+    axs2[0].imshow(fft_abs_diff_sm, origin='lower', cmap='bwr', norm=colors.LogNorm(vmin=fft_abs_diff_mo.min(), vmax=fft_abs_diff_mo.max()))
+    axs2[0].axis('off')
+    axs2[0].set_title(f"||Smartinit - Target|| spectra \nRMSE = {np.sqrt(np.mean(fft_abs_diff_sm**2)):.2f}\nMedian = {np.median(fft_abs_diff_sm):.2f}")
+    
+    pos = axs2[1].imshow(fft_abs_diff_mo, origin='lower', cmap='bwr', norm=colors.LogNorm(vmin=fft_abs_diff_mo.min(), vmax=fft_abs_diff_mo.max()))
+    axs2[1].axis('off')
+    axs2[1].set_title(f"||Model - Target|| spectra \nRMSE = {np.sqrt(np.mean(fft_abs_diff_mo**2)):.2f}\nMedian = {np.median(fft_abs_diff_mo):.2f}")
+    
+    cbar2 = plt.colorbar(pos, cax=cax2, fraction=C.region_keyword_plot_dict[region_keyword]['fft_error_cax_fraction'])
+    cbar2.set_label(f"Wavenumber Difference")
+    
+    fig2.suptitle(f"Power Spectra Absolute Differences, {region_keyword}, {dt_current} \nModel = {model_attrs.savename}", fontsize=14, 
+                 y=C.region_keyword_plot_dict[region_keyword]['fft_error_suptitle_y'])
+
+    plt.show()
+
+    return
+
+########################################################
+
 def plot_model_vs_smartinit_RMSE(model_attrs, 
                                  statsobj_model, 
                                  statsobj_smartinit,
@@ -379,7 +460,7 @@ def plot_model_vs_smartinit_RMSE(model_attrs,
             if statsobj_model.region_keyword is not None:
                 save_name = f"RMSE_{statsobj_model.C.region_keyword_dict[statsobj_model.region_keyword]['abbreviation']}_{statsobj_model.target_var}_model({model_attrs.savename})"
         
-        if not os.exists(f"{save_dir}/{save_name}.png"):
+        if not os.path.exists(f"{save_dir}/{save_name}.png"):
             plt.savefig(f"{save_dir}/{save_name}.png", dpi=300, bbox_inches="tight")
             print(f"{save_name} saved to {save_dir}")
         else:
