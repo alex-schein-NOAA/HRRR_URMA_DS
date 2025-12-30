@@ -320,6 +320,8 @@ def plot_power_spectra_and_error(sm_r, mo_r, t_r, dt_current, model_attrs, regio
         - region_keyword --> string of valid region keyword, as in CONSTANTS
         - save_fig --> bool to save the figures. As of 2025/12/30, not yet implemented!
     """
+
+    C = CONSTANTS()
     
     fft_smartinit = np.fft.fft2(sm_r)
     fft_model_output = np.fft.fft2(mo_r)
