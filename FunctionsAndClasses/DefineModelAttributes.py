@@ -154,7 +154,8 @@ class DefineModelAttributes():
             - predictor_vars (the whole list)
             - target_vars (the whole list)
         """
-        self.with_terrains = [] #reset to an empty list
+        if self.with_terrains is not None: #edge case of loading a model without any terrains
+            self.with_terrains = [] #reset to an empty list
         strs = savename.split("_")
         for string in strs:
             if "attn" in string:
