@@ -23,6 +23,8 @@ class CONSTANTS():
         self.DIR_TRAIN_TEST = f"/scratch3/BMC/wrfruc/aschein/Train_Test_Files"
         self.DIR_UNET_MAIN = f"/scratch3/BMC/wrfruc/aschein/UNet_final" #Should be os.getcwd()
         self.DIR_TRAINED_MODELS = f"{self.DIR_UNET_MAIN}/Trained_models" 
+        self.DIR_STATS_SMARTINIT = f"{self.DIR_UNET_MAIN}/Smartinit_stats"
+        self.DIR_STATS_MODEL = f"{self.DIR_UNET_MAIN}/Model_stats"
         self.DIR_SMARTINIT_DATA = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files" #regridded Smartinit
         self.DIR_SMARTINIT_DATA_NDFD_GRID = f"/scratch3/BMC/wrfruc/aschein/SMARTINIT_STUFF/smartinit_2024/output_files_NDFDgrid" #old Smartinit on native grid
 
