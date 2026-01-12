@@ -190,6 +190,44 @@ def get_valid_region_mask(VALID_REGION_FILEPATH=None,
 
     return valid_region_for_patch_sw_corner
 
+########################################################
+
+def check_rmse_data_and_read_in(data_savename):
+    """
+    Checks if precalculated RMSE data (as specified by data_savename) exists on disk. 
+    If True, reads it into a new list and returns that list. 
+    If False, gives a warning and returns an empty list. 
+
+    Calling function is responsible for data sanitization!
+    """
+    C = CONSTANTS()
+    
+    if "pred(" in data_savename: #horrid hack but works for current savename scheme
+        if os.path.exists(f"{C.DIR_STATS_MODEL}/{data_savename}"):
+            print(f"{data_savename} exists on disk. Reading in now...")
+            with open(f"{C.DIR_STATS_MODEL}/{data_savename}", 'r', newline='') as file:
+                reader = csv.reader(file)
+                rmse_list = [np.float32(x) for x in (list(reader))[0]]
+            return rmse_list
+        else:
+            print(f"{data_savename} does not exist on disk.")
+            return []
+            
+    elif "smartinit" in data_savename:
+        if os.path.exists(f"{C.DIR_STATS_SMARTINIT}/{data_savename}"):
+            print(f"{data_savename} exists on disk. Reading in now...")
+            with open(f"{C.DIR_STATS_SMARTINIT}/{data_savename}", 'r', newline='') as file:
+                reader = csv.reader(file)
+                rmse_list = [np.float32(x) for x in (list(reader))[0]]
+            return rmse_list
+        else:
+            print(f"{data_savename} does not exist on disk.")
+            return []
+    
+    else:
+        print(f"data_savename doesn't contain the proper keyword(s) to distinguish model stats from smartinit stats. Retry!")
+        return []
+
 ######################################################################################################################################################
 
 ########################################################
