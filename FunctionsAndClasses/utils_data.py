@@ -228,6 +228,37 @@ def check_rmse_data_and_read_in(data_savename):
         print(f"data_savename doesn't contain the proper keyword(s) to distinguish model stats from smartinit stats. Retry!")
         return []
 
+########################################################
+
+def save_rmse_data_to_disk(rmse_list, data_savename):
+    """
+    Takes in list of RMSE data and a corresponding savename and saves it to the appropriate directory.
+    """
+    C = CONSTANTS()
+
+    if "pred(" in data_savename:
+        if not os.path.exists(f"{C.DIR_STATS_MODEL}/{data_savename}"):
+            with open(f"{C.DIR_STATS_MODEL}/{data_savename}", "w", newline='') as file:
+                csv_writer = csv.writer(file)
+                csv_writer.writerow(rmse_list)
+            print(f"{data_savename} written to {C.DIR_STATS_MODEL}")
+        else:
+            print(f"{data_savename} already exists in {C.DIR_STATS_MODEL}")
+
+    elif "smartinit" in data_savename:
+        if not os.path.exists(f"{C.DIR_STATS_SMARTINIT}/{data_savename}"):
+            with open(f"{C.DIR_STATS_SMARTINIT}/{data_savename}", "w", newline='') as file:
+                csv_writer = csv.writer(file)
+                csv_writer.writerow(rmse_list)
+            print(f"{data_savename} written to {C.DIR_STATS_SMARTINIT}")
+        else:
+            print(f"{data_savename} already exists in {C.DIR_STATS_SMARTINIT}")
+
+    else:
+        print(f"data_savename doesn't contain the proper keyword(s) to distinguish model stats from smartinit stats. Retry!")
+        
+    return
+    
 ######################################################################################################################################################
 
 ########################################################
