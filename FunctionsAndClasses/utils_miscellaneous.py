@@ -201,17 +201,17 @@ def calc_all_stats_all_regions(model_attrs, TARG_VAR):
         data_savename_smartinit_pythag_gradient_rmse_regional = f"smartinit_pythag_gradient_RMSE_alltimes_{region_abbreviation}_{TARG_VAR}.csv"
         data_savename_smartinit_fourier_rmse_regional = f"smartinit_fourier_RMSE_alltimes_{region_abbreviation}_{TARG_VAR}.csv"
         
-        save_rmse_data_to_disk(model_domain_avg_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_model_domain_avg_rmse_regional)
-        save_rmse_data_to_disk(model_zonal_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_model_zonal_gradient_rmse_regional)
-        save_rmse_data_to_disk(model_merid_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_model_merid_gradient_rmse_regional)
-        save_rmse_data_to_disk(model_pythag_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_model_pythag_gradient_rmse_regional)
-        save_rmse_data_to_disk(model_fourier_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_model_fourier_rmse_regional)
+        save_rmse_data_to_disk(model_domain_avg_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_model_domain_avg_rmse_regional)
+        save_rmse_data_to_disk(model_zonal_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_model_zonal_gradient_rmse_regional)
+        save_rmse_data_to_disk(model_merid_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_model_merid_gradient_rmse_regional)
+        save_rmse_data_to_disk(model_pythag_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_model_pythag_gradient_rmse_regional)
+        save_rmse_data_to_disk(model_fourier_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_model_fourier_rmse_regional)
 
-        save_rmse_data_to_disk(smartinit_domain_avg_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_smartinit_domain_avg_rmse_regional)
-        save_rmse_data_to_disk(smartinit_zonal_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_smartinit_zonal_gradient_rmse_regional)
-        save_rmse_data_to_disk(smartinit_merid_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_smartinit_merid_gradient_rmse_regional)
-        save_rmse_data_to_disk(smartinit_pythag_gradient_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_smartinit_pythag_gradient_rmse_regional)
-        save_rmse_data_to_disk(smartinit_fourier_rmse_regional_statsobjs_list.domain_avg_rmse_alltimes_list[region_idx], data_savename_smartinit_fourier_rmse_regional)
+        save_rmse_data_to_disk(smartinit_domain_avg_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_smartinit_domain_avg_rmse_regional)
+        save_rmse_data_to_disk(smartinit_zonal_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_smartinit_zonal_gradient_rmse_regional)
+        save_rmse_data_to_disk(smartinit_merid_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_smartinit_merid_gradient_rmse_regional)
+        save_rmse_data_to_disk(smartinit_pythag_gradient_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_smartinit_pythag_gradient_rmse_regional)
+        save_rmse_data_to_disk(smartinit_fourier_rmse_regional_statsobjs_list[region_idx].domain_avg_rmse_alltimes_list, data_savename_smartinit_fourier_rmse_regional)
 
     print(f"!!!!!!! ALL DATA FOR {model_attrs.savename} WRITTEN TO DISK !!!!!!!")
         
