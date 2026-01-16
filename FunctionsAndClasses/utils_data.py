@@ -192,7 +192,7 @@ def get_valid_region_mask(VALID_REGION_FILEPATH=None,
 
 ########################################################
 
-def check_rmse_data_and_read_in(data_savename):
+def check_rmse_data_and_read_in(data_savename, suppress_printout=False):
     """
     Checks if precalculated RMSE data (as specified by data_savename) exists on disk. 
     If True, reads it into a new list and returns that list. 
@@ -201,10 +201,14 @@ def check_rmse_data_and_read_in(data_savename):
     Calling function is responsible for data sanitization!
     """
     C = CONSTANTS()
+
+    if ".csv" not in data_savename:
+        data_savename = data_savename + ".csv"
     
     if "pred(" in data_savename: #horrid hack but works for current savename scheme
         if os.path.exists(f"{C.DIR_STATS_MODEL}/{data_savename}"):
-            print(f"{data_savename} exists on disk. Reading in now...")
+            if not suppress_printout:
+                print(f"{data_savename} exists on disk. Reading in now...")
             with open(f"{C.DIR_STATS_MODEL}/{data_savename}", 'r', newline='') as file:
                 reader = csv.reader(file)
                 rmse_list = [np.float32(x) for x in (list(reader))[0]]
@@ -215,7 +219,8 @@ def check_rmse_data_and_read_in(data_savename):
             
     elif "smartinit" in data_savename:
         if os.path.exists(f"{C.DIR_STATS_SMARTINIT}/{data_savename}"):
-            print(f"{data_savename} exists on disk. Reading in now...")
+            if not suppress_printout:
+                print(f"{data_savename} exists on disk. Reading in now...")
             with open(f"{C.DIR_STATS_SMARTINIT}/{data_savename}", 'r', newline='') as file:
                 reader = csv.reader(file)
                 rmse_list = [np.float32(x) for x in (list(reader))[0]]
