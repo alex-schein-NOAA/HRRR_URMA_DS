@@ -8,3 +8,5 @@ Contains all the necessary files for recreating and extending the HRRR-URMA down
 5. Examine the output model with `view_results.ipynb`.
 
 Additional information can be found in the file/function documentation. 
+
+The data currently in Model_stats can be overwritten with the stats from your trained model(s); the Smartinit stats are static and would need to be recomputed from Smartinit output, which is beyond the scope of this repository. 
