@@ -55,15 +55,18 @@ for YYYYMMDD in *; do
     cd ${YYYYMMDD}
     for file in *; do
         if [[ ! "${file}" == *"idx"  &&  "${file}" == *"wrfnatf01"* ]]; then #make sure we avoid the grib2 index files, if they exist, AND we only work with the wrfnat 1-hr forecast files (if multiple forecast hours are in the same directory)
+            # Extract just the tXXz part of file name, assuming it looks like [something].tXXz.[something].grib2
+            tXXz=${file#*.}
+            tXXz=${tXXz%.*}
+            tXXz=${tXXz%.*}
+            
             for IDX in "${!VAR_LIST[@]}"; do
-                # Extract just the tXXz part of file name, assuming it looks like [something].tXXz.[something].grib2
-                tXXz=${file#*.}
-                tXXz=${tXXz%.*}
-                tXXz=${tXXz%.*}
-
                 target_filename="hrrr_${VAR_LIST[$IDX]}_${YYYYMMDD}_${tXXz}_regridded.grib2"
 
-                if [ ! -f "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}" ]; then #file DNE in target directory, safe to proceed
+                if [[ ! -e "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}" ]]; then #file DNE in target directory, safe to proceed
+                    if [[ -e "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" ]]; then
+                        rm "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2"
+                    fi
                     wgrib2 ${file} -match "${VAR_SELECTION_LIST[$IDX]}" -grib "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" #subset the appropriate variable into a temporary holding file
                     wgrib2 "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" -set_radius 1:6370000 -set_grib_type c3 -set_bitmap 0 -new_grid_winds grid -new_grid_vectors none -new_grid_interpolation bilinear -new_grid lambert:265.0:25.0:25.0 233.723448:2345:2539.703 19.228976:1597:2539.703 "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}"
                     target_filesize=$(stat -c '%s' "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}")
@@ -74,12 +77,13 @@ for YYYYMMDD in *; do
                         wgrib2 "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" -set_radius 1:6370000 -set_grib_type c3 -set_bitmap 0 -new_grid_winds grid -new_grid_vectors none -new_grid_interpolation bilinear -new_grid lambert:265.0:25.0:25.0 233.723448:2345:2539.703 19.228976:1597:2539.703 "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}"
                         target_filesize=$(stat -c '%s' "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}")
                     done #end filesize check and while loop
+                    echo "${target_filename} DONE"
 
                 else #if file exists, make sure it's not tiny, which happens often if process is interrupted mid-run
                     target_filesize=$(stat -c '%s' "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}")
-                    echo "${target_filename} | filesize = ${target_filesize} | REMAKING!!"
                     while (( target_filesize < 10000 )); do 
-                        if [ -f "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" ]; then
+                        echo "${target_filename} | filesize = ${target_filesize} | REMAKING!!"
+                        if [[ -e "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" ]]; then
                             rm "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2"
                         fi
                         rm "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}"
@@ -88,7 +92,10 @@ for YYYYMMDD in *; do
                         target_filesize=$(stat -c '%s' "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}")
                     done #end filesize check and while loop
                 fi #end target_filename check
-                rm "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2"
+                
+                if [[ -e "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2" ]]; then
+                    rm "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/TEMP.grib2"
+                fi
 
                 #Special check: remove the final time (23:00 UTC 2024-12-31) so that it isn't in the testing dataset (as its valid time is 00:00 UTC 2025-01-01)
                 if [ "${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}/${target_filename}" == *"20241231_t23z"* ]; then
@@ -103,5 +110,27 @@ done #end 'for YYYYMMDD in *'
 ########################################################################
 ### Concatenate into training and testing datasets 
 
-### TO DO once all the data has been generated
-## !!! Make sure 23:00 UTC 2020-12-31 is in the training dataset (DNE on ai-datadepot, so manually copy it in for testing), and 23:00 UTC 2023-12-31 is EXCLUDED from the testing dataset !!!
+for IDX in "${!VAR_LIST[@]}"; do
+    cd ${HRRR_REGRIDDED_DATA_DIR}/${VAR_LIST[$IDX]}
+
+    #Training set shouldn't have 2023-12-31 23z in it
+    echo "Making HRRR training dataset for ${VAR_LIST[$IDX]} (2021/22/23)..."
+    output_filename=train_hrrr_alltimes_CONUS_${VAR_LIST[$IDX]}.grib2
+    if [[ ! -e ${HRRR_TRAIN_TEST_DIR}/${output_filename} ]]; then
+        find . -maxdepth 1 -type f ! -name *'20231231_t23z'* ! -name *'_2024'* -exec cat {} + > ${HRRR_TRAIN_TEST_DIR}/${output_filename}
+        echo "HRRR training dataset for ${VAR_LIST[$IDX]} is done"
+    else
+        echo "!! HRRR training dataset for ${VAR_LIST[$IDX]} already exists at ${HRRR_TRAIN_TEST_DIR}/${output_filename}"
+    fi
+
+    #Testing set SHOULD have 2023-12-31 23z in it
+    echo "Making HRRR testing dataset for ${VAR_LIST[$IDX]} (2024)..."
+    output_filename=test_hrrr_alltimes_CONUS_${VAR_LIST[$IDX]}.grib2
+    if [[ ! -e ${HRRR_TRAIN_TEST_DIR}/${output_filename} ]]; then
+        cat *_20231231_t23z*.grib2 *_2024*.grib2 > ${HRRR_TRAIN_TEST_DIR}/${output_filename}
+        echo "HRRR testing dataset for ${VAR_LIST[$IDX]} is done"
+    else
+        echo "!! HRRR testing dataset for ${VAR_LIST[$IDX]} already exists at ${HRRR_TRAIN_TEST_DIR}/${output_filename}"
+    fi
+    
+done #end loop over VAR_LIST
